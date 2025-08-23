@@ -161,7 +161,9 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
         }
       } else {
         // Handle string fields
-        newData[name as keyof typeof newData] = value;
+        if (name === 'customerId' || name === 'notes' || name === 'tableId') {
+          newData[name] = value;
+        }
       }
       
       return newData;
@@ -377,21 +379,28 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                   <label htmlFor="tableId" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
                     Select Table *
                   </label>
-                  <select
-                    id="tableId"
-                    name="tableId"
-                    value={formData.tableId}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
-                  >
-                    <option value="">Choose a table</option>
-                    {getAvailableTablesForCapacity().map(table => (
-                      <option key={table.id} value={table.id}>
-                        🏠 Table {table.tableNumber} - {table.type} ({table.capacity} people)
-                      </option>
-                    ))}
-                  </select>
+                                   <select
+                   id="tableId"
+                   name="tableId"
+                   value={formData.tableId}
+                   onChange={(e) => {
+                     const selectedTable = tables.find(t => t.id === e.target.value);
+                     setFormData(prev => ({
+                       ...prev,
+                       tableId: e.target.value,
+                       tableNumber: selectedTable?.tableNumber || 0
+                     }));
+                   }}
+                   required
+                   className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
+                 >
+                   <option value="">Choose a table</option>
+                   {getAvailableTablesForCapacity().map(table => (
+                     <option key={table.id} value={table.id}>
+                       🏠 Table {table.tableNumber} - {table.type} ({table.capacity} people)
+                     </option>
+                   ))}
+                 </select>
                   {formData.tableId && (
                     <div className="mt-2 text-neon-bright/70 font-arcade text-xs">
                       ✅ Table selected: {tables.find(t => t.id === formData.tableId)?.tableNumber}
@@ -543,20 +552,27 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                 <label htmlFor="editTableId" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
                   Select Table *
                 </label>
-                <select
-                  id="editTableId"
-                  name="tableId"
-                  value={editFormData.tableId}
-                  onChange={(e) => setEditFormData(prev => ({ ...prev, tableId: parseInt(e.target.value) || 1 }))}
-                  required
-                  className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
-                >
-                  {Array.from({ length: 50 }, (_, i) => i + 1).map(tableNum => (
-                    <option key={tableNum} value={tableNum}>
-                      🏠 Table {tableNum}
-                    </option>
-                  ))}
-                </select>
+                                 <select
+                   id="editTableId"
+                   name="tableId"
+                   value={editFormData.tableId}
+                   onChange={(e) => {
+                     const selectedTable = tables.find(t => t.id === e.target.value);
+                     setEditFormData(prev => ({
+                       ...prev,
+                       tableId: e.target.value,
+                       tableNumber: selectedTable?.tableNumber || 0
+                     }));
+                   }}
+                   required
+                   className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
+                 >
+                   {tables.map(table => (
+                     <option key={table.id} value={table.id}>
+                       🏠 Table {table.tableNumber} - {table.type} ({table.capacity} people)
+                     </option>
+                   ))}
+                 </select>
               </div>
 
               {/* Capacity and Gender Section */}
@@ -565,51 +581,51 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                   <label htmlFor="editCapacity" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
                     Total People *
                   </label>
-                  <input
-                    type="number"
-                    id="editCapacity"
-                    name="capacity"
-                    value={editFormData.capacity}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, capacity: parseInt(e.target.value) || 1 }))}
-                    min="1"
-                    max="20"
-                    required
-                    className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
-                  />
+                                     <input
+                     type="number"
+                     id="editCapacity"
+                     name="capacity"
+                     value={editFormData.capacity}
+                     onChange={(e) => setEditFormData(prev => ({ ...prev, capacity: Number(e.target.value) || 1 }))}
+                     min="1"
+                     max="20"
+                     required
+                     className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
+                   />
                 </div>
                 
                 <div>
                   <label htmlFor="editMale" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
                     Male Count
                   </label>
-                  <input
-                    type="number"
-                    id="editMale"
-                    name="male"
-                    value={editFormData.male}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, male: parseInt(e.target.value) || 0 }))}
-                    min="0"
-                    max={editFormData.capacity}
-                    required
-                    className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
-                  />
+                                     <input
+                     type="number"
+                     id="editMale"
+                     name="male"
+                     value={editFormData.male}
+                     onChange={(e) => setEditFormData(prev => ({ ...prev, male: Number(e.target.value) || 0 }))}
+                     min="0"
+                     max={editFormData.capacity}
+                     required
+                     className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
+                   />
                 </div>
                 
                 <div>
                   <label htmlFor="editFemale" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
                     Female Count
                   </label>
-                  <input
-                    type="number"
-                    id="editFemale"
-                    name="female"
-                    value={editFormData.female}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, female: parseInt(e.target.value) || 0 }))}
-                    min="0"
-                    max={editFormData.capacity}
-                    required
-                    className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
-                  />
+                                     <input
+                     type="number"
+                     id="editFemale"
+                     name="female"
+                     value={editFormData.female}
+                     onChange={(e) => setEditFormData(prev => ({ ...prev, female: Number(e.target.value) || 0 }))}
+                     min="0"
+                     max={editFormData.capacity}
+                     required
+                     className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
+                   />
                 </div>
               </div>
 
