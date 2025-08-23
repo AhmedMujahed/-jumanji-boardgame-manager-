@@ -11,8 +11,12 @@ export const metadata: Metadata = {
   authors: [{ name: 'Jumanji Board Game Shop' }],
   viewport: 'width=device-width, initial-scale=1',
   icons: {
-    icon: '/favicon_final.ico',
-    shortcut: '/favicon_final.ico',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' },
+      { url: '/favicon_final.ico', sizes: 'any', type: 'image/x-icon' }
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
   },
 }
 
@@ -24,10 +28,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/favicon_final.ico" />
-        <link rel="shortcut icon" href="/favicon_final.ico" />
+        <link rel="icon" href="/favicon.ico?v=2" type="image/x-icon" />
+        <link rel="icon" href="/favicon_final.ico?v=2" type="image/x-icon" />
+        <link rel="shortcut icon" href="/favicon.ico?v=2" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#000000" />
+        <meta name="msapplication-TileColor" content="#000000" />
       </head>
       <body className={inter.className}>
         <div id="root">
