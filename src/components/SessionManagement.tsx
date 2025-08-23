@@ -102,39 +102,49 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     const { name, value } = e.target;
     
     setFormData(prev => {
-      let newData = { ...prev, [name]: value };
+      let newData = { ...prev };
       
-      // If capacity changes, adjust gender counts to maintain balance
+      // Handle numeric fields - convert to numbers
       if (name === 'capacity') {
-        const newCapacity = Number(value) || 0;
+        const numValue = Number(value) || 0;
+        newData.capacity = numValue;
+        
+        // If capacity changes, adjust gender counts to maintain balance
         const currentTotal = prev.male + prev.female;
         
-        if (newCapacity >= currentTotal) {
+        if (numValue >= currentTotal) {
           // If new capacity is greater or equal, keep current gender breakdown
-          newData = { ...newData, capacity: newCapacity };
+          // newData.capacity is already set above
         } else {
           // If new capacity is less, adjust gender counts proportionally
-          const ratio = newCapacity / currentTotal;
+          const ratio = numValue / currentTotal;
           newData = {
             ...newData,
-            capacity: newCapacity,
             male: Math.round(prev.male * ratio),
-            female: newCapacity - Math.round(prev.male * ratio)
+            female: numValue - Math.round(prev.male * ratio)
           };
         }
-      }
-      
-      // Ensure male + female doesn't exceed capacity
-      if (name === 'male' || name === 'female') {
+      } else if (name === 'male') {
         const numValue = Number(value) || 0;
-        const otherGender = name === 'male' ? 'female' : 'male';
-        const otherValue = prev[otherGender];
-        const currentValue = numValue;
+        newData.male = numValue;
         
-        if (currentValue + otherValue > prev.capacity) {
-          // Adjust the other gender count to fit within capacity
-          newData[otherGender] = Math.max(0, prev.capacity - currentValue);
+        // Ensure male + female doesn't exceed capacity
+        if (numValue + prev.female > prev.capacity) {
+          // Adjust the female count to fit within capacity
+          newData.female = Math.max(0, prev.capacity - numValue);
         }
+      } else if (name === 'female') {
+        const numValue = Number(value) || 0;
+        newData.female = numValue;
+        
+        // Ensure male + female doesn't exceed capacity
+        if (prev.male + numValue > prev.capacity) {
+          // Adjust the male count to fit within capacity
+          newData.male = Math.max(0, prev.capacity - numValue);
+        }
+      } else {
+        // Handle string fields
+        newData[name as keyof typeof newData] = value;
       }
       
       return newData;
