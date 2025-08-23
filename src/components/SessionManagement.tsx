@@ -28,9 +28,9 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     customerId: '',
     notes: '',
     gameMasterId: user.id,
-    capacity: '1',
-    male: '1',
-    female: '0',
+    capacity: 1,
+    male: 1,
+    female: 0,
     tableId: '',
     tableNumber: 0
   });
@@ -64,14 +64,9 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Convert string values to numbers for validation
-    const maleCount = parseInt(formData.male);
-    const femaleCount = parseInt(formData.female);
-    const totalCapacity = parseInt(formData.capacity);
-    
     // Validate that male + female equals capacity
-    if (maleCount + femaleCount !== totalCapacity) {
-      alert(`Gender count mismatch! Male (${maleCount}) + Female (${femaleCount}) must equal Total People (${totalCapacity})`);
+    if (formData.male + formData.female !== formData.capacity) {
+      alert(`Gender count mismatch! Male (${formData.male}) + Female (${formData.female}) must equal Total People (${formData.capacity})`);
       return;
     }
     
@@ -80,10 +75,10 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
         customerId: formData.customerId,
         notes: formData.notes,
         gameMasterId: user.id,
-        capacity: totalCapacity,
+        capacity: formData.capacity,
         genderBreakdown: {
-          male: maleCount,
-          female: femaleCount
+          male: formData.male,
+          female: formData.female
         },
         tableId: formData.tableId,
         tableNumber: formData.tableNumber,
@@ -93,9 +88,9 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
         customerId: '', 
         notes: '', 
         gameMasterId: user.id,
-        capacity: '1',
-        male: '1',
-        female: '0',
+        capacity: 1,
+        male: 1,
+        female: 0,
         tableId: '',
         tableNumber: 0
       });
@@ -112,7 +107,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
       // If capacity changes, adjust gender counts to maintain balance
       if (name === 'capacity') {
         const newCapacity = parseInt(value) || 0;
-        const currentTotal = parseInt(prev.male) + parseInt(prev.female);
+        const currentTotal = prev.male + prev.female;
         
         if (newCapacity >= currentTotal) {
           // If new capacity is greater or equal, keep current gender breakdown
@@ -123,8 +118,8 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
           newData = {
             ...newData,
             capacity: newCapacity,
-            male: Math.round(parseInt(prev.male) * ratio).toString(),
-            female: (newCapacity - Math.round(parseInt(prev.male) * ratio)).toString()
+            male: Math.round(prev.male * ratio),
+            female: newCapacity - Math.round(prev.male * ratio)
           };
         }
       }
@@ -133,12 +128,12 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
       if (name === 'male' || name === 'female') {
         const numValue = parseInt(value) || 0;
         const otherGender = name === 'male' ? 'female' : 'male';
-        const otherValue = parseInt(prev[otherGender]);
+        const otherValue = prev[otherGender];
         const currentValue = numValue;
         
-        if (currentValue + otherValue > parseInt(prev.capacity)) {
+        if (currentValue + otherValue > prev.capacity) {
           // Adjust the other gender count to fit within capacity
-          newData[otherGender] = Math.max(0, parseInt(prev.capacity) - currentValue).toString();
+          newData[otherGender] = Math.max(0, prev.capacity - currentValue);
         }
       }
       
