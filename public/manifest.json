@@ -1,0 +1,16 @@
+{
+  "name": "Jumanji Board Game Shop",
+  "short_name": "Jumanji BGS",
+  "description": "Professional board game shop management system with session tracking and analytics",
+  "icons": [
+    {
+      "src": "/favicon_final.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#000000"
+}

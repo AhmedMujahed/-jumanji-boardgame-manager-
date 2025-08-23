@@ -10,6 +10,10 @@ export const metadata: Metadata = {
   keywords: 'board games, shop management, session tracking, gaming cafe',
   authors: [{ name: 'Jumanji Board Game Shop' }],
   viewport: 'width=device-width, initial-scale=1',
+  icons: {
+    icon: '/favicon_final.ico',
+    shortcut: '/favicon_final.ico',
+  },
 }
 
 export default function RootLayout({
@@ -19,6 +23,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon_final.ico" />
+        <link rel="shortcut icon" href="/favicon_final.ico" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#000000" />
+      </head>
       <body className={inter.className}>
         <div id="root">
           {children}
