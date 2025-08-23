@@ -106,7 +106,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
       
       // If capacity changes, adjust gender counts to maintain balance
       if (name === 'capacity') {
-        const newCapacity = parseInt(value) || 0;
+        const newCapacity = Number(value) || 0;
         const currentTotal = prev.male + prev.female;
         
         if (newCapacity >= currentTotal) {
@@ -126,7 +126,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
       
       // Ensure male + female doesn't exceed capacity
       if (name === 'male' || name === 'female') {
-        const numValue = parseInt(value) || 0;
+        const numValue = Number(value) || 0;
         const otherGender = name === 'male' ? 'female' : 'male';
         const otherValue = prev[otherGender];
         const currentValue = numValue;
@@ -192,7 +192,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
 
   const handleCancelEdit = () => {
     setEditingSession(null);
-    setEditFormData({ notes: '', status: 'active', capacity: 1, male: 1, female: 0, tableId: 1 });
+    setEditFormData({ notes: '', status: 'active', capacity: 1, male: 1, female: 0, tableId: '', tableNumber: 0 });
   };
 
   const activeSessions = sessions.filter(s => s.status === 'active');
