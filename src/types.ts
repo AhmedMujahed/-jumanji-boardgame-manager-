@@ -72,6 +72,30 @@ export interface CustomerStats {
   averageSessionLength: number;
 }
 
+// New interfaces for Monthly Tracking
+export interface MonthlyMetrics {
+  year: number;
+  month: number;
+  monthName: string;
+  revenue: number;
+  sessions: number;
+  hours: number;
+  customers: number;
+  averageSessionLength: number;
+}
+
+export interface MonthlyAnalytics {
+  currentMonth: MonthlyMetrics;
+  previousMonth: MonthlyMetrics;
+  monthlyTrends: MonthlyMetrics[];
+  yearToDate: {
+    totalRevenue: number;
+    totalSessions: number;
+    totalHours: number;
+    totalCustomers: number;
+  };
+}
+
 // New interfaces for Game Library
 export interface Game {
   id: string;

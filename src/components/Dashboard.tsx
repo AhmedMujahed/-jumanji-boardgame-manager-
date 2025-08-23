@@ -78,6 +78,12 @@ const Dashboard: React.FC<DashboardProps> = ({
     return role === 'owner' ? 'Owner' : 'Game Master';
   };
 
+  // Check if user has access to activity logs
+  const hasLogsAccess = user.role === 'owner';
+  
+  // Check if user has access to analytics
+  const hasAnalyticsAccess = user.role === 'owner';
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
@@ -87,6 +93,23 @@ const Dashboard: React.FC<DashboardProps> = ({
       case 'sessions':
         return <SessionManagement customers={customers} sessions={sessions} tables={tables} onAddSession={onAddSession} onUpdateSession={onUpdateSession} onEndSession={onEndSession} user={user} />;
       case 'analytics':
+        // Only allow access to analytics for owner role
+        if (!hasAnalyticsAccess) {
+          return (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🔒</div>
+              <h3 className="text-2xl font-arcade font-bold text-gold-bright mb-4">
+                Access Restricted
+              </h3>
+              <p className="text-neon-bright text-lg font-arcade">
+                Analytics are only available to owners.
+              </p>
+              <p className="text-neon-bright/80 text-md font-arcade mt-2">
+                Please contact an owner if you need access to this information.
+              </p>
+            </div>
+          );
+        }
         return <AnalyticsDashboard customers={customers} sessions={sessions} user={user} />;
       case 'games':
         return <GameLibrary games={games} onAddGame={onAddGame} onUpdateGame={onUpdateGame} onDeleteGame={onDeleteGame} />;
@@ -95,22 +118,57 @@ const Dashboard: React.FC<DashboardProps> = ({
       case 'tables':
         return <TableManagement tables={tables} reservations={reservations} customers={customers} sessions={sessions} onAddTable={onAddTable} onUpdateTable={onUpdateTable} onDeleteTable={onDeleteTable} onTableStatusChange={onTableStatusChange} onAddReservation={onAddReservation} onUpdateReservation={onUpdateReservation} onDeleteReservation={onDeleteReservation} onRefreshTables={onRefreshTables} />;
       case 'logs':
+        // Only allow access to logs for owner role
+        if (!hasLogsAccess) {
+          return (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🔒</div>
+              <h3 className="text-2xl font-arcade font-bold text-gold-bright mb-4">
+                Access Restricted
+              </h3>
+              <p className="text-neon-bright text-lg font-arcade">
+                Activity logs are only available to owners.
+              </p>
+              <p className="text-neon-bright/80 text-md font-arcade mt-2">
+                Please contact an owner if you need access to this information.
+              </p>
+            </div>
+          );
+        }
         return <ActivityLogComponent logs={logs} user={user} onClearAllLogs={onClearAllLogs} />;
       default:
         return <Overview customers={customers} sessions={sessions} user={user} />;
     }
   };
 
-  const tabs = [
-    { id: 'overview', label: '🎲 Overview', icon: '🎲' },
-    { id: 'customers', label: '👥 Customers', icon: '🎯' },
-    { id: 'sessions', label: '⏱️ Sessions', icon: '🎮' },
-    { id: 'analytics', label: '📊 Analytics', icon: '📊' },
-    { id: 'games', label: '🎲 Games', icon: '🎲' },
-    { id: 'payments', label: '💰 Payments', icon: '💰' },
-    { id: 'tables', label: '🏠 Tables', icon: '🏠' },
-    { id: 'logs', label: '📋 Activity Log', icon: '📋' }
-  ];
+  // Filter tabs based on user role
+  const getFilteredTabs = () => {
+    const allTabs = [
+      { id: 'overview', label: '🎲 Overview', icon: '🎲' },
+      { id: 'customers', label: '👥 Customers', icon: '🎯' },
+      { id: 'sessions', label: '⏱️ Sessions', icon: '🎮' },
+      { id: 'analytics', label: '📊 Analytics', icon: '📊' },
+      { id: 'games', label: '🎲 Games', icon: '🎲' },
+      { id: 'payments', label: '💰 Payments', icon: '💰' },
+      { id: 'tables', label: '🏠 Tables', icon: '🏠' },
+      { id: 'logs', label: '📋 Activity Log', icon: '📋' }
+    ];
+
+    // Only show analytics and logs tabs for owners
+    return allTabs.filter(tab => 
+      (tab.id !== 'analytics' || hasAnalyticsAccess) && 
+      (tab.id !== 'logs' || hasLogsAccess)
+    );
+  };
+
+  const tabs = getFilteredTabs();
+
+  // If user tries to access restricted tabs without permission, redirect to overview
+  React.useEffect(() => {
+    if ((activeTab === 'logs' && !hasLogsAccess) || (activeTab === 'analytics' && !hasAnalyticsAccess)) {
+      setActiveTab('overview');
+    }
+  }, [activeTab, hasLogsAccess, hasAnalyticsAccess]);
 
   return (
     <div className="min-h-screen bg-void-1000 dark:bg-void-1000 bg-light-1000 dark:bg-jumanji-pattern dark:bg-dice-pattern transition-colors duration-300">

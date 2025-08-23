@@ -14,6 +14,24 @@ const ActivityLogComponent: React.FC<ActivityLogProps> = ({ logs, user, onClearA
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Additional security check - only owners can access this component
+  if (user.role !== 'owner') {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">🔒</div>
+        <h3 className="text-2xl font-arcade font-bold text-gold-bright mb-4">
+          Access Denied
+        </h3>
+        <p className="text-neon-bright text-lg font-arcade">
+          You don't have permission to view activity logs.
+        </p>
+        <p className="text-neon-bright/80 text-md font-arcade mt-2">
+          This feature is restricted to owners only.
+        </p>
+      </div>
+    );
+  }
+
   useEffect(() => {
     let filtered = logs;
 

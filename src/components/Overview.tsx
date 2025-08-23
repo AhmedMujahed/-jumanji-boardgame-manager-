@@ -2,6 +2,7 @@ import React from 'react';
 import JumanjiStatsCard from './JumanjiStatsCard';
 import JumanjiCard from './JumanjiCard';
 import { User, Customer, Session } from '../types';
+import { startOfMonth, endOfMonth } from 'date-fns';
 
 interface OverviewProps {
   customers: Customer[];
@@ -41,7 +42,29 @@ const Overview: React.FC<OverviewProps> = ({ customers, sessions, user }) => {
       .slice(0, 5);
   };
 
-  const totalRevenue = sessions.reduce((sum, session) => sum + (session.totalCost || 0), 0);
+  // Calculate monthly metrics
+  const getMonthlyMetrics = () => {
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+
+    const monthlySessions = sessions.filter(session => {
+      const sessionDate = new Date(session.startTime);
+      return sessionDate >= monthStart && sessionDate <= monthEnd;
+    });
+
+    const monthlyRevenue = monthlySessions.reduce((sum, session) => sum + (session.totalCost || 0), 0);
+    const monthlyHours = monthlySessions.reduce((sum, session) => sum + (session.hours || 0), 0);
+    const monthlyActiveSessions = monthlySessions.filter(session => session.status === 'active').length;
+
+    return {
+      revenue: monthlyRevenue,
+      hours: monthlyHours,
+      activeSessions: monthlyActiveSessions
+    };
+  };
+
+  const monthlyMetrics = getMonthlyMetrics();
   const totalHours = sessions.reduce((sum, session) => sum + (session.hours || 0), 0);
   const activeSessions = sessions.filter(session => session.status === 'active').length;
   const completedSessions = sessions.filter(session => session.status === 'completed').length;
@@ -65,16 +88,16 @@ const Overview: React.FC<OverviewProps> = ({ customers, sessions, user }) => {
           color="jungle"
         />
         <JumanjiStatsCard
-          title="Total Revenue"
-          value={`${totalRevenue.toFixed(0)} SAR`}
-          subtitle="All time earnings"
+          title="Monthly Revenue"
+          value={`${monthlyMetrics.revenue.toFixed(0)} SAR`}
+          subtitle={`${new Date().toLocaleString('default', { month: 'long' })} earnings`}
           icon="💰"
           color="gold"
         />
         <JumanjiStatsCard
-          title="Total Hours"
-          value={`${totalHours.toFixed(1)}h`}
-          subtitle="Gaming time"
+          title="Monthly Hours"
+          value={`${monthlyMetrics.hours.toFixed(1)}h`}
+          subtitle={`${new Date().toLocaleString('default', { month: 'long' })} gaming time`}
           icon="🎮"
           color="earth"
         />
