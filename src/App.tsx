@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
-import { User, Customer, Session, Game, Payment, Table, Reservation, ActivityLog } from './types';
+import { User, Customer, Session, Game, Payment, Table, Reservation, ActivityLog, TableStatus } from './types';
+import { getAllTables, validateTableAssignment, checkTableConflicts } from './utils/tableManagement';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(() => {
@@ -32,7 +33,16 @@ const App: React.FC = () => {
 
   const [tables, setTables] = useState<Table[]>(() => {
     const savedTables = localStorage.getItem('tables');
-    return savedTables ? JSON.parse(savedTables) : [];
+    if (savedTables) {
+      const parsedTables = JSON.parse(savedTables);
+      // Ensure we have exactly 50 tables
+      if (parsedTables.length === 50) {
+        return parsedTables;
+      }
+    }
+    // Initialize tables if none exist or if count is wrong
+    const initialTables = getAllTables();
+    return initialTables;
   });
 
   const [reservations, setReservations] = useState<Reservation[]>(() => {
@@ -42,7 +52,26 @@ const App: React.FC = () => {
 
   const [logs, setLogs] = useState<ActivityLog[]>(() => {
     const savedLogs = localStorage.getItem('logs');
-    return savedLogs ? JSON.parse(savedLogs) : [];
+    if (savedLogs) {
+      try {
+        const parsedLogs = JSON.parse(savedLogs);
+        // Check for duplicate IDs and filter them out
+        const uniqueLogs = parsedLogs.filter((log: ActivityLog, index: number, arr: ActivityLog[]) => 
+          arr.findIndex(l => l.id === log.id) === index
+        );
+        
+        // If we found duplicates, update localStorage
+        if (uniqueLogs.length !== parsedLogs.length) {
+          localStorage.setItem('logs', JSON.stringify(uniqueLogs));
+        }
+        
+        return uniqueLogs;
+      } catch (error) {
+        console.error('Error parsing logs from localStorage:', error);
+        return [];
+      }
+    }
+    return [];
   });
 
   // Save data to localStorage whenever it changes
@@ -74,12 +103,23 @@ const App: React.FC = () => {
     localStorage.setItem('logs', JSON.stringify(logs));
   }, [logs]);
 
+  // Initialize tables if they don't exist
+  useEffect(() => {
+    if (tables.length === 0) {
+      const initialTables = getAllTables();
+      setTables(initialTables);
+    }
+  }, [tables.length]);
+
   // Logging function
   const addLog = (type: ActivityLog['type'], action: string, details: string) => {
     if (!user) return;
     
+    // Create a unique ID using timestamp + random number to avoid duplicates
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     const newLog: ActivityLog = {
-      id: Date.now().toString(),
+      id: uniqueId,
       type,
       userId: user.id,
       userName: user.username,
@@ -111,7 +151,7 @@ const App: React.FC = () => {
   const addCustomer = (customerData: Omit<Customer, 'id' | 'createdAt'>) => {
     const newCustomer: Customer = {
       ...customerData,
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       createdAt: new Date().toISOString()
     };
     setCustomers(prev => [...prev, newCustomer]);
@@ -119,9 +159,25 @@ const App: React.FC = () => {
   };
 
   const addSession = (sessionData: Omit<Session, 'id' | 'startTime' | 'status' | 'totalCost' | 'hours'>) => {
+    // Validate table assignment before creating session
+    if (sessionData.tableId) {
+      const validation = validateTableAssignment(sessionData.tableId, sessionData.capacity);
+      if (!validation.isValid) {
+        alert(`Cannot start session: ${validation.error}`);
+        return;
+      }
+      
+      // Check for conflicts
+      const conflictCheck = checkTableConflicts(sessionData.tableId, '');
+      if (conflictCheck.hasConflict) {
+        alert(`Table conflict: ${conflictCheck.conflictDetails}`);
+        return;
+      }
+    }
+    
     const newSession: Session = {
       ...sessionData,
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       startTime: new Date().toISOString(),
       status: 'active',
       totalCost: 0,
@@ -129,8 +185,19 @@ const App: React.FC = () => {
     };
     setSessions(prev => [...prev, newSession]);
     
+    // Update table status to occupied
+    if (sessionData.tableId) {
+      const customer = customers.find(c => c.id === sessionData.customerId);
+      updateTable(sessionData.tableId, {
+        status: 'occupied',
+        currentSessionId: newSession.id,
+        customerName: customer?.name || 'Unknown',
+        startTime: newSession.startTime
+      });
+    }
+    
     const customer = customers.find(c => c.id === sessionData.customerId);
-    addLog('session_start', 'Session Started', `Started session for customer: ${customer?.name || 'Unknown'} - ${sessionData.capacity} people (${sessionData.genderBreakdown.male}M, ${sessionData.genderBreakdown.female}F) - Table ${sessionData.tableId} - ${sessionData.notes || 'No notes'}`);
+                 addLog('session_start', 'Session Started', `Started session for customer: ${customer?.name || 'Unknown'} - ${sessionData.capacity} people (${sessionData.genderBreakdown?.male || 0}M, ${sessionData.genderBreakdown?.female || 0}F) - Table ${sessionData.tableNumber || sessionData.tableId} - ${sessionData.notes || 'No notes'}`);
   };
 
   const updateSession = (sessionId: string, updates: Partial<Session>) => {
@@ -175,6 +242,16 @@ const App: React.FC = () => {
     }));
     
     const session = sessions.find(s => s.id === sessionId);
+    if (session && session.tableId) {
+      // Free the table when session ends
+      updateTable(session.tableId, {
+        status: 'available',
+        currentSessionId: undefined,
+        customerName: undefined,
+        startTime: undefined
+      });
+    }
+    
     const customer = customers.find(c => c.id === session?.customerId);
     addLog('session_end', 'Session Ended', `Ended session for customer: ${customer?.name || 'Unknown'} - ${session?.capacity || 0} people - Duration: ${session?.hours || 0}h, Cost: ${session?.totalCost || 0} SAR`);
   };
@@ -183,7 +260,7 @@ const App: React.FC = () => {
   const addGame = (gameData: Omit<Game, 'id'>) => {
     const newGame: Game = {
       ...gameData,
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       createdAt: new Date().toISOString()
     };
     setGames(prev => [...prev, newGame]);
@@ -208,7 +285,7 @@ const App: React.FC = () => {
   const addPayment = (paymentData: Omit<Payment, 'id'>) => {
     const newPayment: Payment = {
       ...paymentData,
-      id: Date.now().toString()
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     };
     setPayments(prev => [...prev, newPayment]);
     
@@ -241,39 +318,84 @@ const App: React.FC = () => {
   const addTable = (tableData: Omit<Table, 'id'>) => {
     const newTable: Table = {
       ...tableData,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString()
     };
     setTables(prev => [...prev, newTable]);
-    addLog('table_add', 'Table Added', `Added table: ${tableData.name} (${tableData.type}) - Capacity: ${tableData.capacity}`);
+    addLog('table_add', 'Table Added', `Added table: ${tableData.tableNumber} (${tableData.tableNumber}) - Capacity: ${tableData.capacity}`);
   };
 
   const updateTable = (tableId: string, updates: Partial<Table>) => {
-    setTables(prev => prev.map(table => 
-      table.id === tableId ? { ...table, ...updates } : table
-    ));
+    setTables(prev => {
+      const updatedTables = prev.map(table => 
+        table.id === tableId ? { ...table, ...updates, lastUpdated: new Date().toISOString() } : table
+      );
+      
+      // Save to local storage immediately
+      localStorage.setItem('tables', JSON.stringify(updatedTables));
+      
+      // Find the updated table for logging
+      const updatedTable = updatedTables.find(t => t.id === tableId);
+      addLog('table_edit', 'Table Updated', `Updated table: ${updatedTable?.tableNumber || 'Unknown'} - ${Object.keys(updates).join(', ')}`);
+      
+      return updatedTables;
+    });
+  };
+
+  // Handle table status change specifically
+  const handleTableStatusChange = (tableId: string, newStatus: TableStatus) => {
+    updateTable(tableId, { status: newStatus });
+  };
+
+  // Force refresh tables (reinitialize all 50 tables)
+  const handleRefreshTables = () => {
+    // Force clear localStorage and reinitialize all tables
+    localStorage.removeItem('tables');
     
-    const table = tables.find(t => t.id === tableId);
-    addLog('table_edit', 'Table Updated', `Updated table: ${table?.name || 'Unknown'} - ${Object.keys(updates).join(', ')}`);
+    // Also clear logs to prevent duplicate key issues
+    localStorage.removeItem('logs');
+    setLogs([]);
+    
+    const initialTables = getAllTables();
+    setTables(initialTables);
+    
+    // Add a fresh log entry
+    if (user) {
+      const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const refreshLog: ActivityLog = {
+        id: uniqueId,
+        type: 'table_refresh',
+        userId: user.id,
+        userName: user.username,
+        userRole: user.role,
+        action: 'Tables Refreshed',
+        details: 'All 50 tables have been reinitialized',
+        timestamp: new Date().toISOString(),
+        ipAddress: '127.0.0.1',
+        userAgent: navigator.userAgent
+      };
+      setLogs([refreshLog]);
+    }
   };
 
   const deleteTable = (tableId: string) => {
     const table = tables.find(t => t.id === tableId);
     setTables(prev => prev.filter(table => table.id !== tableId));
-    addLog('table_delete', 'Table Deleted', `Deleted table: ${table?.name || 'Unknown'}`);
+    addLog('table_delete', 'Table Deleted', `Deleted table: ${table?.tableNumber || 'Unknown'}`);
   };
 
   const addReservation = (reservationData: Omit<Reservation, 'id'>) => {
     const newReservation: Reservation = {
       ...reservationData,
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       createdAt: new Date().toISOString()
     };
     setReservations(prev => [...prev, newReservation]);
     
     const table = tables.find(t => t.id === reservationData.tableId);
     const customer = customers.find(c => c.id === reservationData.customerId);
-    addLog('reservation_add', 'Reservation Added', `Added reservation: Table ${table?.name || 'Unknown'} for customer: ${customer?.name || 'Unknown'} - ${reservationData.partySize} people`);
+    addLog('reservation_add', 'Reservation Added', `Added reservation: Table ${table?.tableNumber || 'Unknown'} for customer: ${customer?.name || 'Unknown'} - ${reservationData.partySize} people`);
   };
 
   const updateReservation = (reservationId: string, updates: Partial<Reservation>) => {
@@ -289,6 +411,28 @@ const App: React.FC = () => {
     const reservation = reservations.find(r => r.id === reservationId);
     setReservations(prev => prev.filter(reservation => reservation.id !== reservationId));
     addLog('reservation_delete', 'Reservation Deleted', `Deleted reservation for customer: ${customers.find(c => c.id === reservation?.customerId)?.name || 'Unknown'}`);
+  };
+
+  // Clear all logs to resolve duplicate key issues
+  const clearAllLogs = () => {
+    localStorage.removeItem('logs');
+    setLogs([]);
+    if (user) {
+      const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const clearLog: ActivityLog = {
+        id: uniqueId,
+        type: 'system_action',
+        userId: user.id,
+        userName: user.username,
+        userRole: user.role,
+        action: 'Logs Cleared',
+        details: 'All activity logs have been cleared',
+        timestamp: new Date().toISOString(),
+        ipAddress: '127.0.0.1',
+        userAgent: navigator.userAgent
+      };
+      setLogs([clearLog]);
+    }
   };
 
   if (!user) {
@@ -319,9 +463,12 @@ const App: React.FC = () => {
       onAddTable={addTable}
       onUpdateTable={updateTable}
       onDeleteTable={deleteTable}
+      onTableStatusChange={handleTableStatusChange}
+      onRefreshTables={handleRefreshTables}
       onAddReservation={addReservation}
       onUpdateReservation={updateReservation}
       onDeleteReservation={deleteReservation}
+      onClearAllLogs={clearAllLogs}
     />
   );
 };

@@ -28,18 +28,19 @@ export interface Session {
   notes?: string;
   gameMasterId: string;
   capacity: number; // Number of people in the session
-  genderBreakdown: {
+  genderBreakdown?: {
     male: number;
     female: number;
   };
-  tableId: number; // Table number (1-50)
+  tableId: string; // Table ID (not just number)
+  tableNumber: number; // Table number (1-50) for display
   createdAt: string;
 }
 
 // New interfaces for comprehensive logging
 export interface ActivityLog {
   id: string;
-  type: 'session_start' | 'session_end' | 'session_edit' | 'session_delete' | 'customer_add' | 'customer_edit' | 'customer_delete' | 'payment_add' | 'payment_edit' | 'payment_delete' | 'game_add' | 'game_edit' | 'game_delete' | 'table_add' | 'table_edit' | 'table_delete' | 'reservation_add' | 'reservation_edit' | 'reservation_delete' | 'user_login' | 'user_logout' | 'system_action';
+  type: 'session_start' | 'session_end' | 'session_edit' | 'session_delete' | 'customer_add' | 'customer_edit' | 'customer_delete' | 'payment_add' | 'payment_edit' | 'payment_delete' | 'game_add' | 'game_edit' | 'game_delete' | 'table_add' | 'table_edit' | 'table_delete' | 'table_refresh' | 'reservation_add' | 'reservation_edit' | 'reservation_delete' | 'user_login' | 'user_logout' | 'system_action';
   userId: string;
   userName: string;
   userRole: string;
@@ -112,13 +113,30 @@ export interface SessionCapacity {
 // New interfaces for Table Management
 export interface Table {
   id: string;
-  name: string;
-  capacity: number;
+  tableNumber: number; // 1-50
+  status: 'available' | 'occupied' | 'reserved' | 'maintenance';
+  capacity: number; // Maximum number of people
+  currentSessionId?: string; // ID of active session if occupied
+  customerName?: string; // Name of customer using the table
+  startTime?: string; // When the current session started
   type: 'standard' | 'premium' | 'vip';
   features: string[];
-  isAvailable: boolean;
   location?: string;
+  notes?: string;
   createdAt: string;
+  lastUpdated: string;
+}
+
+// Table status types for easier management
+export type TableStatus = 'available' | 'occupied' | 'reserved' | 'maintenance';
+
+// Table selection data for forms
+export interface TableSelectionData {
+  tableId: string;
+  tableNumber: number;
+  capacity: number;
+  type: 'standard' | 'premium' | 'vip';
+  status: TableStatus;
 }
 
 export interface Reservation {

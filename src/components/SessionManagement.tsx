@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import SessionTimer from './SessionTimer';
-import { User, Customer, Session } from '../types';
+import { User, Customer, Session, Table } from '../types';
+import { getAvailableTables, isTableAvailableForSession } from '../utils/tableManagement';
 
 interface SessionManagementProps {
   customers: Customer[];
   sessions: Session[];
+  tables: Table[];
   onAddSession: (session: Omit<Session, 'id' | 'startTime' | 'status' | 'totalCost' | 'hours'>) => void;
   onUpdateSession: (sessionId: string, updates: Partial<Session>) => void;
   onEndSession: (sessionId: string) => void;
@@ -15,6 +17,7 @@ interface SessionManagementProps {
 const SessionManagement: React.FC<SessionManagementProps> = ({ 
   customers, 
   sessions, 
+  tables,
   onAddSession, 
   onUpdateSession, 
   onEndSession,
@@ -25,10 +28,11 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     customerId: '',
     notes: '',
     gameMasterId: user.id,
-    capacity: 1,
-    male: 1,
-    female: 0,
-    tableId: 1
+    capacity: '1',
+    male: '1',
+    female: '0',
+    tableId: '',
+    tableNumber: 0
   });
 
   const [editingSession, setEditingSession] = useState<string | null>(null);
@@ -38,7 +42,8 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     capacity: 1,
     male: 1,
     female: 0,
-    tableId: 1
+    tableId: '',
+    tableNumber: 0
   });
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -51,36 +56,48 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     return () => clearInterval(interval);
   }, []);
 
+  // Helper function to get default gender breakdown
+  const getDefaultGenderBreakdown = (session: Session) => {
+    return session.genderBreakdown || { male: 0, female: 0 };
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Convert string values to numbers for validation
+    const maleCount = parseInt(formData.male);
+    const femaleCount = parseInt(formData.female);
+    const totalCapacity = parseInt(formData.capacity);
+    
     // Validate that male + female equals capacity
-    if (formData.male + formData.female !== formData.capacity) {
-      alert(`Gender count mismatch! Male (${formData.male}) + Female (${formData.female}) must equal Total People (${formData.capacity})`);
+    if (maleCount + femaleCount !== totalCapacity) {
+      alert(`Gender count mismatch! Male (${maleCount}) + Female (${femaleCount}) must equal Total People (${totalCapacity})`);
       return;
     }
     
-    if (formData.customerId) {
+    if (formData.customerId && formData.tableId) {
       onAddSession({
         customerId: formData.customerId,
         notes: formData.notes,
         gameMasterId: user.id,
-        capacity: formData.capacity,
+        capacity: totalCapacity,
         genderBreakdown: {
-          male: formData.male,
-          female: formData.female
+          male: maleCount,
+          female: femaleCount
         },
         tableId: formData.tableId,
+        tableNumber: formData.tableNumber,
         createdAt: new Date().toISOString()
       });
       setFormData({ 
         customerId: '', 
         notes: '', 
         gameMasterId: user.id,
-        capacity: 1,
-        male: 1,
-        female: 0,
-        tableId: 1
+        capacity: '1',
+        male: '1',
+        female: '0',
+        tableId: '',
+        tableNumber: 0
       });
       setShowAddForm(false);
     }
@@ -88,10 +105,50 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    setFormData(prev => {
+      let newData = { ...prev, [name]: value };
+      
+      // If capacity changes, adjust gender counts to maintain balance
+      if (name === 'capacity') {
+        const newCapacity = parseInt(value) || 0;
+        const currentTotal = parseInt(prev.male) + parseInt(prev.female);
+        
+        if (newCapacity >= currentTotal) {
+          // If new capacity is greater or equal, keep current gender breakdown
+          newData = { ...newData, capacity: newCapacity };
+        } else {
+          // If new capacity is less, adjust gender counts proportionally
+          const ratio = newCapacity / currentTotal;
+          newData = {
+            ...newData,
+            capacity: newCapacity,
+            male: Math.round(parseInt(prev.male) * ratio).toString(),
+            female: (newCapacity - Math.round(parseInt(prev.male) * ratio)).toString()
+          };
+        }
+      }
+      
+      // Ensure male + female doesn't exceed capacity
+      if (name === 'male' || name === 'female') {
+        const numValue = parseInt(value) || 0;
+        const otherGender = name === 'male' ? 'female' : 'male';
+        const otherValue = parseInt(prev[otherGender]);
+        const currentValue = numValue;
+        
+        if (currentValue + otherValue > parseInt(prev.capacity)) {
+          // Adjust the other gender count to fit within capacity
+          newData[otherGender] = Math.max(0, parseInt(prev.capacity) - currentValue).toString();
+        }
+      }
+      
+      return newData;
+    });
+  };
+
+  // Get available tables for the current capacity
+  const getAvailableTablesForCapacity = () => {
+    return tables.filter(table => table.status === 'available' && table.capacity >= formData.capacity);
   };
 
   const handleEditSession = (sessionId: string) => {
@@ -101,9 +158,10 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
         notes: session.notes || '',
         status: session.status,
         capacity: session.capacity,
-        male: session.genderBreakdown.male,
-        female: session.genderBreakdown.female,
-        tableId: session.tableId
+                    male: session.genderBreakdown?.male || 0,
+            female: session.genderBreakdown?.female || 0,
+        tableId: session.tableId,
+        tableNumber: session.tableNumber || 0
       });
       setEditingSession(sessionId);
     }
@@ -118,17 +176,17 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
       return;
     }
     
-    if (editingSession) {
-      onUpdateSession(editingSession, {
-        ...editFormData,
-        genderBreakdown: {
-          male: editFormData.male,
-          female: editFormData.female
-        }
-      });
-      setEditingSession(null);
-      setEditFormData({ notes: '', status: 'active', capacity: 1, male: 1, female: 0, tableId: 1 });
-    }
+         if (editingSession) {
+       onUpdateSession(editingSession, {
+         ...editFormData,
+         genderBreakdown: {
+           male: editFormData.male,
+           female: editFormData.female
+         }
+       });
+       setEditingSession(null);
+       setEditFormData({ notes: '', status: 'active', capacity: 1, male: 1, female: 0, tableId: '', tableNumber: 0 });
+     }
   };
 
   const handleDeleteSession = (sessionId: string) => {
@@ -292,26 +350,32 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                 </select>
               </div>
 
-              {/* Table Selection */}
-              <div>
-                <label htmlFor="tableId" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                  Select Table *
-                </label>
-                <select
-                  id="tableId"
-                  name="tableId"
-                  value={formData.tableId}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
-                >
-                  {Array.from({ length: 50 }, (_, i) => i + 1).map(tableNum => (
-                    <option key={tableNum} value={tableNum}>
-                      🏠 Table {tableNum}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                              {/* Table Selection */}
+                <div>
+                  <label htmlFor="tableId" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
+                    Select Table *
+                  </label>
+                  <select
+                    id="tableId"
+                    name="tableId"
+                    value={formData.tableId}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
+                  >
+                    <option value="">Choose a table</option>
+                    {getAvailableTablesForCapacity().map(table => (
+                      <option key={table.id} value={table.id}>
+                        🏠 Table {table.tableNumber} - {table.type} ({table.capacity} people)
+                      </option>
+                    ))}
+                  </select>
+                  {formData.tableId && (
+                    <div className="mt-2 text-neon-bright/70 font-arcade text-xs">
+                      ✅ Table selected: {tables.find(t => t.id === formData.tableId)?.tableNumber}
+                    </div>
+                  )}
+                </div>
 
               {/* Capacity and Gender Section */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -367,34 +431,34 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                 </div>
               </div>
 
-               {/* Gender Summary */}
-               <div className={`p-3 rounded-lg border ${
-                 formData.male + formData.female === formData.capacity 
-                   ? 'bg-void-700/30 border-neon-bright/20' 
-                   : 'bg-danger-500/20 border-danger-500/50'
-               }`}>
-                 <div className="text-center">
-                   <div className={`font-arcade text-sm ${
-                     formData.male + formData.female === formData.capacity 
-                       ? 'text-neon-bright/80' 
-                       : 'text-danger-400'
-                   }`}>
-                     <strong>👥 Session Summary:</strong> {formData.capacity} people total
-                   </div>
-                   <div className={`text-xs mt-1 ${
-                     formData.male + formData.female === formData.capacity 
-                       ? 'text-neon-bright/60' 
-                       : 'text-danger-400/80'
-                   }`}>
-                     🚹 {formData.male} Male • 🚺 {formData.female} Female • 💰 First 30 min: {30 * formData.capacity} SAR
-                   </div>
-                   {formData.male + formData.female !== formData.capacity && (
-                     <div className="text-danger-400 font-arcade font-bold text-sm mt-2">
-                       ⚠️ Gender count must equal total people!
-                     </div>
-                   )}
-                 </div>
-               </div>
+                               {/* Gender Summary */}
+                <div className={`p-3 rounded-lg border ${
+                  parseInt(formData.male) + parseInt(formData.female) === parseInt(formData.capacity) 
+                    ? 'bg-void-700/30 border-neon-bright/20' 
+                    : 'bg-danger-500/20 border-danger-500/50'
+                }`}>
+                  <div className="text-center">
+                    <div className={`font-arcade text-sm ${
+                      parseInt(formData.male) + parseInt(formData.female) === parseInt(formData.capacity) 
+                        ? 'text-neon-bright/80' 
+                        : 'text-danger-400'
+                    }`}>
+                      <strong>👥 Session Summary:</strong> {formData.capacity} people total
+                    </div>
+                    <div className={`text-xs mt-1 ${
+                      parseInt(formData.male) + parseInt(formData.female) === parseInt(formData.capacity) 
+                        ? 'text-neon-bright/60' 
+                        : 'text-danger-400/80'
+                    }`}>
+                      🚹 {formData.male} Male • 🚺 {formData.female} Female • 💰 First 30 min: {30 * parseInt(formData.capacity)} SAR
+                    </div>
+                    {parseInt(formData.male) + parseInt(formData.female) !== parseInt(formData.capacity) && (
+                      <div className="text-danger-400 font-arcade font-bold text-sm mt-2">
+                        ⚠️ Gender count must equal total people!
+                      </div>
+                    )}
+                  </div>
+                </div>
               
               <div>
                 <label htmlFor="notes" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
@@ -660,7 +724,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                           🕐 Started: {new Date(session.startTime).toLocaleTimeString()}
                         </div>
                         <div className="text-success-400/60 font-arcade text-xs">
-                          👥 {session.capacity} people • 🚹 {session.genderBreakdown.male}M • 🚺 {session.genderBreakdown.female}F
+                          👥 {session.capacity} people • 🚹 {session.genderBreakdown?.male || 0}M • 🚺 {session.genderBreakdown?.female || 0}F
                         </div>
                         <div className="text-success-400/60 font-arcade text-xs">
                           🏠 Table {session.tableId}

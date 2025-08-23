@@ -5,9 +5,10 @@ import { ActivityLog } from '../types';
 interface ActivityLogProps {
   logs: ActivityLog[];
   user: any;
+  onClearAllLogs: () => void;
 }
 
-const ActivityLogComponent: React.FC<ActivityLogProps> = ({ logs, user }) => {
+const ActivityLogComponent: React.FC<ActivityLogProps> = ({ logs, user, onClearAllLogs }) => {
   const [filteredLogs, setFilteredLogs] = useState<ActivityLog[]>(logs);
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedUser, setSelectedUser] = useState<string>('all');
@@ -179,16 +180,28 @@ const ActivityLogComponent: React.FC<ActivityLogProps> = ({ logs, user }) => {
           </div>
 
           {/* Clear Filters */}
-          <div className="flex items-end">
+          <div className="flex items-end space-x-3">
             <button
               onClick={() => {
                 setSelectedType('all');
                 setSelectedUser('all');
                 setSearchTerm('');
               }}
-              className="w-full px-4 py-3 bg-void-700 hover:bg-void-600 text-neon-bright font-arcade font-bold rounded-xl transition-all duration-300 border-2 border-void-600 hover:border-neon-bright/50"
+              className="flex-1 px-4 py-3 bg-void-700 hover:bg-void-600 text-neon-bright font-arcade font-bold rounded-xl transition-all duration-300 border-2 border-void-600 hover:border-neon-bright/50"
             >
               🗑️ Clear Filters
+            </button>
+            
+            {/* Clear All Logs Button */}
+            <button
+              onClick={() => {
+                if (window.confirm('Are you sure you want to clear all activity logs? This action cannot be undone.')) {
+                  onClearAllLogs();
+                }
+              }}
+              className="flex-1 px-4 py-3 bg-danger-600 hover:bg-danger-700 text-white font-arcade font-bold rounded-xl transition-all duration-300 border-2 border-danger-500 hover:border-danger-600"
+            >
+              🧹 Clear All Logs
             </button>
           </div>
         </div>

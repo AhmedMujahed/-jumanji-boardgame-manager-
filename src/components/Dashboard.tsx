@@ -34,9 +34,12 @@ interface DashboardProps {
   onAddTable: (table: Omit<Table, 'id'>) => void;
   onUpdateTable: (tableId: string, updates: Partial<Table>) => void;
   onDeleteTable: (tableId: string) => void;
+  onTableStatusChange: (tableId: string, status: 'available' | 'occupied' | 'reserved' | 'maintenance') => void;
   onAddReservation: (reservation: Omit<Reservation, 'id'>) => void;
   onUpdateReservation: (reservationId: string, updates: Partial<Reservation>) => void;
   onDeleteReservation: (reservationId: string) => void;
+  onRefreshTables?: () => void;
+  onClearAllLogs: () => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
@@ -62,9 +65,12 @@ const Dashboard: React.FC<DashboardProps> = ({
   onAddTable,
   onUpdateTable,
   onDeleteTable,
+  onTableStatusChange,
   onAddReservation,
   onUpdateReservation,
-  onDeleteReservation
+  onDeleteReservation,
+  onRefreshTables,
+  onClearAllLogs
 }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -79,7 +85,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       case 'customers':
         return <CustomerManagement customers={customers} onAddCustomer={onAddCustomer} user={user} />;
       case 'sessions':
-        return <SessionManagement customers={customers} sessions={sessions} onAddSession={onAddSession} onUpdateSession={onUpdateSession} onEndSession={onEndSession} user={user} />;
+        return <SessionManagement customers={customers} sessions={sessions} tables={tables} onAddSession={onAddSession} onUpdateSession={onUpdateSession} onEndSession={onEndSession} user={user} />;
       case 'analytics':
         return <AnalyticsDashboard customers={customers} sessions={sessions} user={user} />;
       case 'games':
@@ -87,9 +93,9 @@ const Dashboard: React.FC<DashboardProps> = ({
       case 'payments':
         return <PaymentTracking payments={payments} sessions={sessions} customers={customers} onAddPayment={onAddPayment} onUpdatePayment={onUpdatePayment} onDeletePayment={onDeletePayment} />;
       case 'tables':
-        return <TableManagement tables={tables} reservations={reservations} customers={customers} sessions={sessions} onAddTable={onAddTable} onUpdateTable={onUpdateTable} onDeleteTable={onDeleteTable} onAddReservation={onAddReservation} onUpdateReservation={onUpdateReservation} onDeleteReservation={onDeleteReservation} />;
+        return <TableManagement tables={tables} reservations={reservations} customers={customers} sessions={sessions} onAddTable={onAddTable} onUpdateTable={onUpdateTable} onDeleteTable={onDeleteTable} onTableStatusChange={onTableStatusChange} onAddReservation={onAddReservation} onUpdateReservation={onUpdateReservation} onDeleteReservation={onDeleteReservation} onRefreshTables={onRefreshTables} />;
       case 'logs':
-        return <ActivityLogComponent logs={logs} user={user} />;
+        return <ActivityLogComponent logs={logs} user={user} onClearAllLogs={onClearAllLogs} />;
       default:
         return <Overview customers={customers} sessions={sessions} user={user} />;
     }

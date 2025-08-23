@@ -18,7 +18,7 @@ const nextConfig = {
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
     // Custom webpack configurations can go here
     return config;
-  },
+  }
 }
 
 module.exports = nextConfig
