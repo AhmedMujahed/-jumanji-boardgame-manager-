@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Smooth transitions for theme switching */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Tailwind Component Classes */
+@layer components {
+  .btn-jumanji {
+    @apply bg-neon-bright hover:bg-neon-glow text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-neon hover:shadow-neon-lg border-2 border-neon-bright;
+  }
+  
+  .btn-gold {
+    @apply bg-gold-bright hover:bg-gold-neon text-void-1000 font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-gold hover:shadow-gold-lg border-2 border-gold-bright;
+  }
+  
+  .btn-arcade {
+    @apply bg-void-800 hover:bg-void-700 text-gold-bright font-arcade font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-neon hover:shadow-neon-lg border-2 border-neon-bright;
+  }
+  
+  .card-jumanji {
+    @apply bg-void-900 rounded-2xl shadow-2xl border-2 border-neon-bright p-6 backdrop-blur-sm;
+  }
+  
+  .card-arcade {
+    @apply bg-void-800/80 rounded-2xl shadow-neon border-2 border-neon-bright p-6 backdrop-blur-sm;
+  }
+  
+  .gradient-jumanji {
+    @apply bg-gradient-to-br from-void-1000 via-void-950 to-void-900;
+  }
+  
+  .text-gold-glow {
+    @apply text-gold-bright drop-shadow-[0_0_8px_rgba(255,215,0,0.8)];
+  }
+  
+  .text-neon-glow {
+    @apply text-neon-bright drop-shadow-[0_0_8px_rgba(157,78,221,0.8)];
+  }
+  
+  .border-neon-glow {
+    @apply border-neon-bright shadow-neon;
+  }
+  
+  .bg-void-pattern {
+    @apply bg-void-1000 bg-jumanji-pattern bg-dice-pattern;
+  }
+}
