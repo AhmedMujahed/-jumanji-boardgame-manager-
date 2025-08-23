@@ -13,7 +13,7 @@ const nextConfig = {
     ignoreDuringBuilds: false,
   },
   // Enable static exports if needed
-  output: 'standalone',
+  // output: 'standalone', // Commented out for Vercel compatibility
   // Custom webpack config for better performance
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
     // Custom webpack configurations can go here
