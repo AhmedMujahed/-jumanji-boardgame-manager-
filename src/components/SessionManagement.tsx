@@ -24,7 +24,16 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
   user
 }) => {
   const [showAddForm, setShowAddForm] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    customerId: string;
+    notes: string;
+    gameMasterId: string;
+    capacity: number;
+    male: number;
+    female: number;
+    tableId: string;
+    tableNumber: number;
+  }>({
     customerId: '',
     notes: '',
     gameMasterId: user.id,
@@ -36,9 +45,17 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
   });
 
   const [editingSession, setEditingSession] = useState<string | null>(null);
-  const [editFormData, setEditFormData] = useState({
+  const [editFormData, setEditFormData] = useState<{
+    notes: string;
+    status: 'active' | 'completed' | 'cancelled';
+    capacity: number;
+    male: number;
+    female: number;
+    tableId: string;
+    tableNumber: number;
+  }>({
     notes: '',
-    status: 'active' as 'active' | 'completed' | 'cancelled',
+    status: 'active',
     capacity: 1,
     male: 1,
     female: 0,
@@ -163,8 +180,8 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
         notes: session.notes || '',
         status: session.status,
         capacity: session.capacity,
-                    male: session.genderBreakdown?.male || 0,
-            female: session.genderBreakdown?.female || 0,
+        male: session.genderBreakdown?.male || 0,
+        female: session.genderBreakdown?.female || 0,
         tableId: session.tableId,
         tableNumber: session.tableNumber || 0
       });
@@ -436,34 +453,34 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                 </div>
               </div>
 
-                               {/* Gender Summary */}
-                <div className={`p-3 rounded-lg border ${
-                  parseInt(formData.male) + parseInt(formData.female) === parseInt(formData.capacity) 
-                    ? 'bg-void-700/30 border-neon-bright/20' 
-                    : 'bg-danger-500/20 border-danger-500/50'
-                }`}>
-                  <div className="text-center">
-                    <div className={`font-arcade text-sm ${
-                      parseInt(formData.male) + parseInt(formData.female) === parseInt(formData.capacity) 
-                        ? 'text-neon-bright/80' 
-                        : 'text-danger-400'
-                    }`}>
-                      <strong>👥 Session Summary:</strong> {formData.capacity} people total
-                    </div>
-                    <div className={`text-xs mt-1 ${
-                      parseInt(formData.male) + parseInt(formData.female) === parseInt(formData.capacity) 
-                        ? 'text-neon-bright/60' 
-                        : 'text-danger-400/80'
-                    }`}>
-                      🚹 {formData.male} Male • 🚺 {formData.female} Female • 💰 First 30 min: {30 * parseInt(formData.capacity)} SAR
-                    </div>
-                    {parseInt(formData.male) + parseInt(formData.female) !== parseInt(formData.capacity) && (
-                      <div className="text-danger-400 font-arcade font-bold text-sm mt-2">
-                        ⚠️ Gender count must equal total people!
-                      </div>
-                    )}
-                  </div>
-                </div>
+                                                {/* Gender Summary */}
+                 <div className={`p-3 rounded-lg border ${
+                   formData.male + formData.female === formData.capacity 
+                     ? 'bg-void-700/30 border-neon-bright/20' 
+                     : 'bg-danger-500/20 border-danger-500/50'
+                 }`}>
+                   <div className="text-center">
+                     <div className={`font-arcade text-sm ${
+                       formData.male + formData.female === formData.capacity 
+                         ? 'text-neon-bright/80' 
+                         : 'text-danger-400'
+                     }`}>
+                       <strong>👥 Session Summary:</strong> {formData.capacity} people total
+                     </div>
+                     <div className={`text-xs mt-1 ${
+                       formData.male + formData.female === formData.capacity 
+                         ? 'text-neon-bright/60' 
+                         : 'text-danger-400/80'
+                     }`}>
+                       🚹 {formData.male} Male • 🚺 {formData.female} Female • 💰 First 30 min: {30 * formData.capacity} SAR
+                     </div>
+                     {formData.male + formData.female !== formData.capacity && (
+                       <div className="text-danger-400 font-arcade font-bold text-sm mt-2">
+                         ⚠️ Gender count must equal total people!
+                       </div>
+                     )}
+                   </div>
+                 </div>
               
               <div>
                 <label htmlFor="notes" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
