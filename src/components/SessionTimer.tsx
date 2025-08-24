@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 
 interface SessionTimerProps {
   startTime: string;
+  firstHourPrice?: number;
+  extraHourPrice?: number;
+  capacity?: number;
   onUpdate?: (elapsedTime: number) => void;
 }
 
-const SessionTimer: React.FC<SessionTimerProps> = ({ startTime, onUpdate }) => {
+const SessionTimer: React.FC<SessionTimerProps> = ({ startTime, firstHourPrice = 30, extraHourPrice = 30, capacity = 1, onUpdate }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
 
   useEffect(() => {
@@ -21,7 +24,7 @@ const SessionTimer: React.FC<SessionTimerProps> = ({ startTime, onUpdate }) => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [startTime, onUpdate]);
+  }, [startTime]);
 
   const formatTime = (milliseconds: number): string => {
     const totalSeconds = Math.floor(milliseconds / 1000);
@@ -39,18 +42,21 @@ const SessionTimer: React.FC<SessionTimerProps> = ({ startTime, onUpdate }) => {
   const calculateCurrentCost = (): number => {
     const totalMinutes = elapsedTime / (1000 * 60);
     
-    // First 30 minutes = 30 SAR, then every hour after that
-    if (totalMinutes <= 30) {
-      return 30; // First 30 min
+    if (totalMinutes < 30) {
+      return 0;
+    } else if (totalMinutes < 90) { // 30min to 1h30min
+      return firstHourPrice * capacity;
     } else {
-      const hoursAfter30Min = Math.ceil((totalMinutes - 30) / 60); // Hours after first 30 min
-      return 30 + (hoursAfter30Min * 30); // 30 SAR + hourly rate
+      // After 1h30min: first hour + extra hours (every hour from 1h30min)
+      const extraHours = Math.floor((totalMinutes - 90) / 60) + 1;
+      return (firstHourPrice + (extraHours * extraHourPrice)) * capacity;
     }
   };
 
   const getHours = (): number => {
     const totalMinutes = elapsedTime / (1000 * 60);
-    return Math.round(totalMinutes / 60 * 10) / 10; // Round to 1 decimal
+    // Floor to one decimal so 4 minutes shows 0.0, 6 minutes shows 0.1
+    return Math.floor((totalMinutes / 60) * 10) / 10;
   };
 
   const getMinutes = (): number => {
@@ -61,12 +67,18 @@ const SessionTimer: React.FC<SessionTimerProps> = ({ startTime, onUpdate }) => {
   const getCostBreakdown = (): string => {
     const totalMinutes = elapsedTime / (1000 * 60);
     
-    if (totalMinutes <= 30) {
-      return "First 30 min: 30 SAR";
+    if (totalMinutes < 30) {
+      const remaining = Math.ceil(30 - totalMinutes);
+      return `First 30 min: 0 SAR • charge ${firstHourPrice * capacity} SAR in ${remaining}m`;
+    } else if (totalMinutes < 90) {
+      const remaining = Math.ceil(90 - totalMinutes);
+      return `30min-1h30min: ${firstHourPrice * capacity} SAR • next charge ${extraHourPrice * capacity} SAR in ${remaining}m`;
     } else {
-      const hoursAfter30Min = Math.ceil((totalMinutes - 30) / 60);
-      const currentCost = 30 + (hoursAfter30Min * 30);
-      return `${hoursAfter30Min + 0.5} hours: ${currentCost} SAR`;
+      const extraHours = Math.floor((totalMinutes - 90) / 60) + 1;
+      const currentCost = (firstHourPrice + (extraHours * extraHourPrice)) * capacity;
+      const minutesInCurrentHour = Math.floor((totalMinutes - 90) % 60);
+      const remaining = 60 - minutesInCurrentHour;
+      return `First + ${extraHours} extra hours: ${currentCost} SAR • next charge ${extraHourPrice * capacity} SAR in ${remaining}m`;
     }
   };
 
@@ -75,11 +87,14 @@ const SessionTimer: React.FC<SessionTimerProps> = ({ startTime, onUpdate }) => {
     
     if (totalMinutes < 30) {
       const remainingMinutes = 30 - totalMinutes;
-      return `Next charge in ${Math.ceil(remainingMinutes)}m (30 SAR)`;
+      return `Next charge in ${Math.ceil(remainingMinutes)}m (${firstHourPrice} SAR)`;
+    } else if (totalMinutes < 90) {
+      const remainingMinutes = 90 - totalMinutes;
+      return `Next charge in ${Math.ceil(remainingMinutes)}m (${extraHourPrice} SAR)`;
     } else {
-      const minutesInCurrentHour = Math.floor(totalMinutes % 60);
+      const minutesInCurrentHour = Math.floor((totalMinutes - 90) % 60);
       const remainingMinutes = 60 - minutesInCurrentHour;
-      return `Next charge in ${remainingMinutes}m (30 SAR)`;
+      return `Next charge in ${remainingMinutes}m (${extraHourPrice} SAR)`;
     }
   };
 
@@ -135,7 +150,7 @@ const SessionTimer: React.FC<SessionTimerProps> = ({ startTime, onUpdate }) => {
             {getMinutes()}
           </div>
           <div className="text-void-400 font-arcade text-xs font-bold">
-            📍 MINUTES
+            📍 CURRENT HOUR MINS
           </div>
         </div>
       </div>
@@ -144,7 +159,7 @@ const SessionTimer: React.FC<SessionTimerProps> = ({ startTime, onUpdate }) => {
       <div className="mt-4 p-3 bg-void-600/20 rounded-lg border border-void-500/20">
         <div className="text-center">
           <div className="text-void-300 font-arcade text-xs">
-            💡 <strong>Pricing:</strong> First 30 min = 30 SAR • Then 30 SAR per hour
+            💡 <strong>Pricing:</strong> First 30 min = {firstHourPrice} SAR per person • Then {extraHourPrice} SAR per person per hour
           </div>
         </div>
       </div>

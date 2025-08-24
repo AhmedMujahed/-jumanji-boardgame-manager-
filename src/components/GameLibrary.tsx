@@ -12,6 +12,7 @@ interface GameLibraryProps {
 const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGame, onDeleteGame }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedGroupSize, setSelectedGroupSize] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     name: '',
@@ -256,7 +257,14 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
       matchesSearch = game.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         game.description.toLowerCase().includes(searchTerm.toLowerCase());
     }
-    return matchesCategory && matchesSearch;
+    // Group size filter: show games that can accommodate the size between min and max
+    let matchesGroup = true;
+    const group = Number(selectedGroupSize);
+    if (!Number.isNaN(group) && selectedGroupSize !== '') {
+      matchesGroup = group >= (game.minPlayers || 1) && group <= (game.maxPlayers || 999);
+    }
+
+    return matchesCategory && matchesSearch && matchesGroup;
   });
 
   const getDifficultyColor = (difficulty: string) => {
@@ -303,7 +311,7 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
 
       {/* Filters and Search */}
       <div className="bg-light-100 dark:bg-void-900/90 backdrop-blur-md rounded-3xl border-2 border-neon-bright/50 dark:border-neon-bright p-6 transition-colors duration-300">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {/* Category Filter */}
           <div>
             <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Category</label>
@@ -337,13 +345,24 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
             </select>
           </div>
 
+          {/* Group Size Filter (1-15) */}
+          <div>
+            <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Group Size</label>
+            <select value={selectedGroupSize} onChange={(e) => setSelectedGroupSize(e.target.value)} className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300">
+              <option value="">Any</option>
+              {Array.from({ length: 15 }, (_, i) => i + 1).map(n => (
+                <option key={n} value={String(n)}>{n}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Free-text Search */}
           <div>
             <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Search</label>
             <input type="text" placeholder="Search by name or description..." value={searchTerm.startsWith('#') ? '' : searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 font-arcade transition-all duration-300" />
           </div>
         </div>
-        <div className="mt-2 text-neon-bright/60 text-xs font-arcade">Tip: Use tag and age dropdowns to filter quickly.</div>
+        <div className="mt-2 text-neon-bright/60 text-xs font-arcade">Tip: Use tag/age/group filters to find games fast.</div>
       </div>
 
       {/* Add Game Modal */}

@@ -9,7 +9,8 @@ import TableManagement from './TableManagement';
 import ActivityLogComponent from './ActivityLog';
 import JumanjiHeader from './JumanjiHeader';
 import JumanjiButton from './JumanjiButton';
-import { User, Customer, Session, Game, Payment, Table, Reservation, ActivityLog } from '../types';
+import { User, Customer, Session, Game, Payment, Table, Reservation, ActivityLog, Promotion } from '../types';
+import Promotions from './Promotions';
 
 interface DashboardProps {
   user: User;
@@ -17,6 +18,7 @@ interface DashboardProps {
   sessions: Session[];
   games: Game[];
   payments: Payment[];
+  promotions?: Promotion[];
   tables: Table[];
   reservations: Reservation[];
   logs: ActivityLog[];
@@ -33,6 +35,9 @@ interface DashboardProps {
   onAddPayment: (payment: Omit<Payment, 'id'>) => void;
   onUpdatePayment: (paymentId: string, updates: Partial<Payment>) => void;
   onDeletePayment: (paymentId: string) => void;
+  onAddPromotion?: (p: Omit<Promotion, 'id' | 'createdAt'>) => void;
+  onUpdatePromotion?: (id: string, updates: Partial<Promotion>) => void;
+  onDeletePromotion?: (id: string) => void;
   onAddTable: (table: Omit<Table, 'id'>) => void;
   onUpdateTable: (tableId: string, updates: Partial<Table>) => void;
   onDeleteTable: (tableId: string) => void;
@@ -50,6 +55,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   sessions, 
   games,
   payments,
+  promotions,
   tables,
   reservations,
   logs,
@@ -66,6 +72,9 @@ const Dashboard: React.FC<DashboardProps> = ({
   onAddPayment,
   onUpdatePayment,
   onDeletePayment,
+  onAddPromotion,
+  onUpdatePromotion,
+  onDeletePromotion,
   onAddTable,
   onUpdateTable,
   onDeleteTable,
@@ -95,7 +104,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       case 'customers':
         return <CustomerManagement customers={customers} onAddCustomer={onAddCustomer} user={user} onUpdateCustomer={onUpdateCustomer} onDeleteCustomer={onDeleteCustomer} />;
       case 'sessions':
-        return <SessionManagement customers={customers} sessions={sessions} tables={tables} onAddSession={onAddSession} onUpdateSession={onUpdateSession} onEndSession={onEndSession} user={user} />;
+        return <SessionManagement customers={customers} sessions={sessions} tables={tables} promotions={promotions || []} onAddSession={onAddSession} onUpdateSession={onUpdateSession} onEndSession={onEndSession} user={user} />;
       case 'analytics':
         // Only allow access to analytics for owner role
         if (!hasAnalyticsAccess) {
@@ -117,6 +126,8 @@ const Dashboard: React.FC<DashboardProps> = ({
         return <AnalyticsDashboard customers={customers} sessions={sessions} user={user} />;
       case 'games':
         return <GameLibrary games={games} onAddGame={onAddGame} onUpdateGame={onUpdateGame} onDeleteGame={onDeleteGame} />;
+      case 'promotions':
+        return <Promotions promotions={promotions || []} onAddPromotion={onAddPromotion!} onUpdatePromotion={onUpdatePromotion!} onDeletePromotion={onDeletePromotion!} />;
       case 'payments':
         return <PaymentTracking payments={payments} sessions={sessions} customers={customers} onAddPayment={onAddPayment} onUpdatePayment={onUpdatePayment} onDeletePayment={onDeletePayment} />;
       case 'tables':
@@ -151,6 +162,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       { id: 'overview', label: '🎲 Overview', icon: '🎲' },
       { id: 'customers', label: '👥 Customers', icon: '🎯' },
       { id: 'sessions', label: '⏱️ Sessions', icon: '🎮' },
+      { id: 'promotions', label: '🏷️ Promotions', icon: '🏷️' },
       { id: 'analytics', label: '📊 Analytics', icon: '📊' },
       { id: 'games', label: '🎲 Games', icon: '🎲' },
       { id: 'payments', label: '💰 Payments', icon: '💰' },

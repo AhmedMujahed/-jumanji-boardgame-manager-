@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
-import { User, Customer, Session, Game, Payment, Table, Reservation, ActivityLog, TableStatus } from './types';
+import { User, Customer, Session, Game, Payment, Table, Reservation, ActivityLog, TableStatus, Promotion, PromotionHistoryEntry } from './types';
 import { getAllTables, validateTableAssignment, checkTableConflicts } from './utils/tableManagement';
 import { initRealtime, startPresence, notifyAll } from './realtime';
 import { watchSessions } from './realtimeDb';
@@ -31,6 +31,16 @@ const App: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>(() => {
     const savedPayments = localStorage.getItem('payments');
     return savedPayments ? JSON.parse(savedPayments) : [];
+  });
+
+  const [promotions, setPromotions] = useState<Promotion[]>(() => {
+    const saved = localStorage.getItem('promotions');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [promoHistory, setPromoHistory] = useState<PromotionHistoryEntry[]>(() => {
+    const saved = localStorage.getItem('promoHistory');
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [tables, setTables] = useState<Table[]>(() => {
@@ -92,6 +102,14 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('payments', JSON.stringify(payments));
   }, [payments]);
+
+  useEffect(() => {
+    localStorage.setItem('promotions', JSON.stringify(promotions));
+  }, [promotions]);
+
+  useEffect(() => {
+    localStorage.setItem('promoHistory', JSON.stringify(promoHistory));
+  }, [promoHistory]);
 
   useEffect(() => {
     localStorage.setItem('tables', JSON.stringify(tables));
@@ -194,8 +212,13 @@ const App: React.FC = () => {
       }
     }
     
+    // Auto-apply active promotion if any (not optional)
+    const now = new Date();
+    const activePromo = promotions.find(p => p.isActive && (!p.startDate || new Date(p.startDate) <= now) && (!p.endDate || new Date(p.endDate) >= now));
+
     const newSession: Session = {
       ...sessionData,
+      promoId: activePromo?.id,
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       startTime: new Date().toISOString(),
       status: 'active',
@@ -218,7 +241,7 @@ const App: React.FC = () => {
     }
     
     const customer = customers.find(c => c.id === sessionData.customerId);
-                 addLog('session_start', 'Session Started', `Started session for customer: ${customer?.name || 'Unknown'} - ${sessionData.capacity} people (${sessionData.genderBreakdown?.male || 0}M, ${sessionData.genderBreakdown?.female || 0}F) - Table ${sessionData.tableNumber || sessionData.tableId} - ${sessionData.notes || 'No notes'}`);
+                 addLog('session_start', 'Session Started', `Started session for customer: ${customer?.name || 'Unknown'} - ${sessionData.capacity} people (${sessionData.genderBreakdown?.male || 0}M, ${sessionData.genderBreakdown?.female || 0}F) - Table ${sessionData.tableNumber || sessionData.tableId} - ${sessionData.notes || 'No notes'}${activePromo ? ` • Promo: ${activePromo.name}` : ''}`);
   };
 
   const updateSession = (sessionId: string, updates: Partial<Session>) => {
@@ -242,13 +265,19 @@ const App: React.FC = () => {
         const startTime = new Date(session.startTime);
         const totalMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
         
-        // First 30 minutes = 30 SAR, then every hour after that
+        // Compute pricing: apply promotion if selected
         let totalCost = 0;
-        if (totalMinutes <= 30) {
-          totalCost = 30 * session.capacity; // First 30 min
+        const firstHourPrice = session.promoId ? (promotions.find(p => p.id === session.promoId)?.firstHourPrice || 30) : 30;
+        const extraHourPrice = session.promoId ? (promotions.find(p => p.id === session.promoId)?.extraHourPrice || 30) : 30;
+        
+        if (totalMinutes < 30) {
+          totalCost = 0;
+        } else if (totalMinutes < 90) { // 30min to 1h30min
+          totalCost = firstHourPrice * session.capacity;
         } else {
-          const hoursAfter30Min = Math.ceil((totalMinutes - 30) / 60); // Hours after first 30 min
-          totalCost = (30 + (hoursAfter30Min * 30)) * session.capacity; // 30 SAR + hourly rate
+          // After 1h30min: first hour + extra hours (every hour from 1h30min)
+          const extraHours = Math.floor((totalMinutes - 90) / 60) + 1;
+          totalCost = (firstHourPrice + (extraHours * extraHourPrice)) * session.capacity;
         }
         
         const hours = Math.max(0.5, Math.round(totalMinutes / 60 * 10) / 10); // Round to 1 decimal
@@ -292,6 +321,32 @@ const App: React.FC = () => {
     // Broadcast game add
     notifyAll('game:update', { action: 'add', game: newGame });
     addLog('game_add', 'Game Added', `Added game: ${gameData.name} (${gameData.category})`);
+  };
+
+  // Promotions handlers
+  const addPromotion = (data: Omit<Promotion, 'id' | 'createdAt'>) => {
+    const promo: Promotion = {
+      ...data,
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: new Date().toISOString()
+    };
+    setPromotions(prev => [promo, ...prev]);
+    addLog('system_action', 'Promotion Added', `Added promo: ${data.name}`);
+    setPromoHistory(prev => [{ id: `${Date.now()}`, promotionId: promo.id, promotionName: promo.name, action: 'created', timestamp: new Date().toISOString() }, ...prev]);
+  };
+
+  const updatePromotion = (id: string, updates: Partial<Promotion>) => {
+    setPromotions(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    const p = promotions.find(pr => pr.id === id);
+    addLog('system_action', 'Promotion Updated', `Updated promo: ${p?.name || id}`);
+    setPromoHistory(prev => [{ id: `${Date.now()}`, promotionId: id, promotionName: p?.name || id, action: updates.isActive !== undefined ? (updates.isActive ? 'activated' : 'disabled') : 'updated', timestamp: new Date().toISOString(), metadata: updates as any }, ...prev]);
+  };
+
+  const deletePromotion = (id: string) => {
+    const p = promotions.find(pr => pr.id === id);
+    setPromotions(prev => prev.filter(pr => pr.id !== id));
+    addLog('system_action', 'Promotion Deleted', `Deleted promo: ${p?.name || id}`);
+    setPromoHistory(prev => [{ id: `${Date.now()}`, promotionId: id, promotionName: p?.name || id, action: 'deleted', timestamp: new Date().toISOString() }, ...prev]);
   };
 
   const updateGame = (gameId: string, updates: Partial<Game>) => {
@@ -568,6 +623,7 @@ const App: React.FC = () => {
       sessions={sessions}
       games={games}
       payments={payments}
+      promotions={promotions}
       tables={tables}
       reservations={reservations}
       logs={logs}
@@ -593,6 +649,9 @@ const App: React.FC = () => {
       onUpdateReservation={updateReservation}
       onDeleteReservation={deleteReservation}
       onClearAllLogs={clearAllLogs}
+      onAddPromotion={addPromotion}
+      onUpdatePromotion={updatePromotion}
+      onDeletePromotion={deletePromotion}
     />
   );
 };

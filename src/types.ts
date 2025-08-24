@@ -25,6 +25,7 @@ export interface Session {
   status: 'active' | 'completed' | 'cancelled';
   hours: number;
   totalCost: number;
+  promoId?: string; // Applied promotion ID
   notes?: string;
   gameMasterId: string;
   capacity: number; // Number of people in the session
@@ -35,6 +36,27 @@ export interface Session {
   tableId: string; // Table ID (not just number)
   tableNumber: number; // Table number (1-50) for display
   createdAt: string;
+}
+
+// Promotion model
+export interface Promotion {
+  id: string;
+  name: string;
+  firstHourPrice: number; // price per person for first hour
+  extraHourPrice: number;  // price per person for each additional hour
+  isActive: boolean;
+  startDate?: string; // ISO string
+  endDate?: string;   // ISO string
+  createdAt: string;
+}
+
+export interface PromotionHistoryEntry {
+  id: string;
+  promotionId: string;
+  promotionName: string;
+  action: 'created' | 'updated' | 'activated' | 'disabled' | 'deleted' | 'applied';
+  timestamp: string;
+  metadata?: Record<string, any>;
 }
 
 // New interfaces for comprehensive logging

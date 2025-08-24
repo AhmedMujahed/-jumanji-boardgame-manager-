@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import ModalPortal from './ModalPortal';
 import { format, formatDistanceToNow } from 'date-fns';
 import SessionTimer from './SessionTimer';
-import { User, Customer, Session, Table } from '../types';
+import { User, Customer, Session, Table, Promotion } from '../types';
 import { getAvailableTables, isTableAvailableForSession } from '../utils/tableManagement';
 
 interface SessionManagementProps {
   customers: Customer[];
   sessions: Session[];
   tables: Table[];
+  promotions?: Promotion[];
   onAddSession: (session: Omit<Session, 'id' | 'startTime' | 'status' | 'totalCost' | 'hours'>) => void;
   onUpdateSession: (sessionId: string, updates: Partial<Session>) => void;
   onEndSession: (sessionId: string) => void;
@@ -19,6 +20,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
   customers, 
   sessions, 
   tables,
+  promotions = [],
   onAddSession, 
   onUpdateSession, 
   onEndSession,
@@ -34,6 +36,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     female: number;
     tableId: string;
     tableNumber: number;
+    promoId?: string;
   }>({
     customerId: '',
     notes: '',
@@ -42,7 +45,8 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     male: 1,
     female: 0,
     tableId: '',
-    tableNumber: 0
+    tableNumber: 0,
+    promoId: undefined
   });
 
   const [editingSession, setEditingSession] = useState<string | null>(null);
@@ -237,13 +241,17 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     if (session.status !== 'active') return session.totalCost;
     const startTime = new Date(session.startTime);
     const totalMinutes = (currentTime.getTime() - startTime.getTime()) / (1000 * 60);
+    const firstHourPrice = session.promoId ? (promotions.find(p => p.id === session.promoId)?.firstHourPrice || 30) : 30;
+    const extraHourPrice = session.promoId ? (promotions.find(p => p.id === session.promoId)?.extraHourPrice || 30) : 30;
     
-    // First 30 minutes = 30 SAR, then every hour after that
-    if (totalMinutes <= 30) {
-      return 30 * session.capacity; // First 30 min
+    if (totalMinutes < 30) {
+      return 0;
+    } else if (totalMinutes < 90) { // 30min to 1h30min
+      return firstHourPrice * session.capacity;
     } else {
-      const hoursAfter30Min = Math.ceil((totalMinutes - 30) / 60); // Hours after first 30 min
-      return (30 + (hoursAfter30Min * 30)) * session.capacity; // 30 SAR + hourly rate
+      // After 1h30min: first hour + extra hours (every hour from 1h30min)
+      const extraHours = Math.floor((totalMinutes - 90) / 60) + 1;
+      return (firstHourPrice + (extraHours * extraHourPrice)) * session.capacity;
     }
   };
 
@@ -251,13 +259,21 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     if (session.status !== 'active') return '';
     const startTime = new Date(session.startTime);
     const totalMinutes = (currentTime.getTime() - startTime.getTime()) / (1000 * 60);
+    const firstHourPrice = session.promoId ? (promotions.find(p => p.id === session.promoId)?.firstHourPrice || 30) : 30;
+    const extraHourPrice = session.promoId ? (promotions.find(p => p.id === session.promoId)?.extraHourPrice || 30) : 30;
     
-    if (totalMinutes <= 30) {
-      return `First 30 min: ${30 * session.capacity} SAR (${session.capacity} people)`;
+    if (totalMinutes < 30) {
+      const remaining = Math.ceil(30 - totalMinutes);
+      return `First 30 min: 0 SAR • charge ${firstHourPrice * session.capacity} SAR in ${remaining}m (${session.capacity} people)`;
+    } else if (totalMinutes < 90) {
+      const remaining = Math.ceil(90 - totalMinutes);
+      return `30min-1h30min: ${firstHourPrice * session.capacity} SAR • next charge ${extraHourPrice * session.capacity} SAR in ${remaining}m (${session.capacity} people)`;
     } else {
-      const hoursAfter30Min = Math.ceil((totalMinutes - 30) / 60);
-      const currentCost = (30 + (hoursAfter30Min * 30)) * session.capacity;
-      return `${hoursAfter30Min + 0.5} hours: ${currentCost} SAR (${session.capacity} people)`;
+      const extraHours = Math.floor((totalMinutes - 90) / 60) + 1;
+      const currentCost = (firstHourPrice + (extraHours * extraHourPrice)) * session.capacity;
+      const minutesInCurrentHour = Math.floor((totalMinutes - 90) % 60);
+      const remaining = 60 - minutesInCurrentHour;
+      return `First + ${extraHours} extra hours: ${currentCost} SAR • next charge ${extraHourPrice * session.capacity} SAR in ${remaining}m (${session.capacity} people)`;
     }
   };
 
@@ -265,14 +281,19 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     if (session.status !== 'active') return '';
     const startTime = new Date(session.startTime);
     const totalMinutes = (currentTime.getTime() - startTime.getTime()) / (1000 * 60);
+    const firstHourPrice = session.promoId ? (promotions.find(p => p.id === session.promoId)?.firstHourPrice || 30) : 30;
+    const extraHourPrice = session.promoId ? (promotions.find(p => p.id === session.promoId)?.extraHourPrice || 30) : 30;
     
     if (totalMinutes < 30) {
       const remainingMinutes = 30 - totalMinutes;
-      return `Next charge in ${Math.ceil(remainingMinutes)}m (30 SAR)`;
+      return `Next charge in ${Math.ceil(remainingMinutes)}m (${firstHourPrice} SAR)`;
+    } else if (totalMinutes < 90) {
+      const remainingMinutes = 90 - totalMinutes;
+      return `Next charge in ${Math.ceil(remainingMinutes)}m (${extraHourPrice} SAR)`;
     } else {
-      const minutesInCurrentHour = Math.floor(totalMinutes % 60);
+      const minutesInCurrentHour = Math.floor((totalMinutes - 90) % 60);
       const remainingMinutes = 60 - minutesInCurrentHour;
-      return `Next charge in ${remainingMinutes}m (30 SAR)`;
+      return `Next charge in ${remainingMinutes}m (${extraHourPrice} SAR)`;
     }
   };
 
@@ -409,6 +430,20 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                     </div>
                   )}
                 </div>
+
+              {/* Promotion Display (auto-applied) */}
+              {promotions.filter(p => p.isActive).length > 0 && (
+                <div>
+                  <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Promotion</label>
+                  <div className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl bg-void-800 text-white font-arcade">
+                    {(() => {
+                      const now = new Date();
+                      const active = promotions.find(p => p.isActive && (!p.startDate || new Date(p.startDate) <= now) && (!p.endDate || new Date(p.endDate) >= now));
+                      return active ? `${active.name} — 1st: ${active.firstHourPrice} • Extra: ${active.extraHourPrice}` : 'No active promotion';
+                    })()}
+                  </div>
+                </div>
+              )}
 
               {/* Capacity and Gender Section */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -772,6 +807,11 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                         <div className="text-success-400/60 font-arcade text-xs">
                           🏠 Table {session.tableId}
                         </div>
+                        {session.promoId && (
+                          <div className="text-success-400/70 font-arcade text-xs mt-1">
+                            🏷 Promo: {promotions.find(p => p.id === session.promoId)?.name} — 1st: {promotions.find(p => p.id === session.promoId)?.firstHourPrice} • Extra: {promotions.find(p => p.id === session.promoId)?.extraHourPrice}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <span className="px-3 py-1 bg-success-500/20 text-success-400 border border-success-500 rounded-full font-arcade font-bold text-sm animate-pulse">
@@ -783,26 +823,16 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                   <div className="mb-4">
                     <SessionTimer 
                       startTime={session.startTime}
+                      firstHourPrice={session.promoId ? (promotions.find(p => p.id === session.promoId)?.firstHourPrice || 30) : 30}
+                      extraHourPrice={session.promoId ? (promotions.find(p => p.id === session.promoId)?.extraHourPrice || 30) : 30}
+                      capacity={session.capacity}
                       onUpdate={(elapsedTime) => {
                         // Update session with elapsed time if needed
                       }}
                     />
                   </div>
 
-                  {/* Cost Display */}
-                  <div className="mb-4 p-4 bg-void-700/50 rounded-xl border border-gold-bright/30">
-                    <div className="text-center">
-                      <div className="text-2xl font-arcade font-black text-gold-bright mb-2">
-                        {calculateCurrentCost(session)} SAR
-                      </div>
-                      <div className="text-gold-bright/70 font-arcade text-sm mb-2">
-                        💰 LIVE TOTAL COST
-                      </div>
-                      <div className="text-gold-bright/60 font-arcade text-xs">
-                        {getCostBreakdown(session)}
-                      </div>
-                    </div>
-                  </div>
+
 
                   {/* Cost Progress */}
                   <div className="mb-4">
