@@ -6,14 +6,19 @@ interface CustomerManagementProps {
   customers: Customer[];
   onAddCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void;
   user: User;
+  onUpdateCustomer?: (customerId: string, updates: Partial<Omit<Customer, 'id' | 'createdAt'>>) => void;
+  onDeleteCustomer?: (customerId: string) => void;
 }
 
 const CustomerManagement: React.FC<CustomerManagementProps> = ({ 
   customers, 
   onAddCustomer, 
-  user 
+  user,
+  onUpdateCustomer,
+  onDeleteCustomer
 }) => {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -26,18 +31,41 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.name.trim()) {
-      onAddCustomer({
-        name: formData.name.trim(),
-        phone: formData.phone.trim(),
-        email: formData.email.trim(),
-        notes: formData.notes.trim(),
-        totalSessions: 0,
-        totalSpent: 0
-      });
+      if (editingId && onUpdateCustomer) {
+        onUpdateCustomer(editingId, {
+          name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
+          notes: formData.notes.trim()
+        });
+      } else {
+        onAddCustomer({
+          name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
+          notes: formData.notes.trim(),
+          totalSessions: 0,
+          totalSpent: 0
+        });
+      }
       setFormData({ name: '', phone: '', email: '', notes: '', totalSessions: 0, totalSpent: 0 });
       setShowAddForm(false);
+      setEditingId(null);
     }
   };
+  const openEdit = (c: Customer) => {
+    setEditingId(c.id);
+    setFormData({
+      name: c.name,
+      phone: c.phone,
+      email: c.email,
+      notes: c.notes || '',
+      totalSessions: c.totalSessions || 0,
+      totalSpent: c.totalSpent || 0
+    });
+    setShowAddForm(true);
+  };
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -63,7 +91,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
           </div>
         </div>
         <button 
-          onClick={() => setShowAddForm(true)}
+          onClick={() => { setEditingId(null); setShowAddForm(true); }}
           className="px-6 py-3 bg-neon-bright hover:bg-neon-glow text-void-1000 font-arcade font-black rounded-xl transition-all duration-300 transform hover:scale-105 shadow-neon hover:shadow-neon-lg border-2 border-neon-bright flex items-center space-x-2"
         >
           <span className="text-xl">🎯</span>
@@ -80,7 +108,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
               <div className="flex items-center space-x-3">
                 <span className="text-3xl">🎮</span>
                 <h3 className="text-2xl font-arcade font-black text-gold-bright">
-                  Add New Customer
+                  {editingId ? 'Edit Customer' : 'Add New Customer'}
                 </h3>
               </div>
               <button 
@@ -195,6 +223,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
                     <th className="text-left py-4 px-4 text-gold-bright font-arcade font-bold">Notes</th>
                     <th className="text-left py-4 px-4 text-gold-bright font-arcade font-bold">Joined</th>
                     <th className="text-left py-4 px-4 text-gold-bright font-arcade font-bold">Sessions</th>
+                    <th className="text-right py-4 px-4 text-gold-bright font-arcade font-bold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -246,6 +275,18 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
                         <span className="px-3 py-1 bg-success-500/20 text-success-400 border border-success-500 rounded-full font-arcade font-bold text-sm">
                           {customer.totalSessions || 0}
                         </span>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <div className="inline-flex gap-2">
+                          <button
+                            onClick={() => openEdit(customer)}
+                            className="px-3 py-2 border-2 border-neon-bright text-neon-bright rounded-lg hover:bg-void-800 font-arcade text-sm"
+                          >Edit</button>
+                          <button
+                            onClick={() => onDeleteCustomer && onDeleteCustomer(customer.id)}
+                            className="px-3 py-2 border-2 border-danger-400 text-danger-400 rounded-lg hover:bg-void-800 font-arcade text-sm"
+                          >Delete</button>
+                        </div>
                       </td>
                     </tr>
                   ))}

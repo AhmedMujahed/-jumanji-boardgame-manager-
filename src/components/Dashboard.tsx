@@ -22,6 +22,8 @@ interface DashboardProps {
   logs: ActivityLog[];
   onLogout: () => void;
   onAddCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void;
+  onUpdateCustomer?: (customerId: string, updates: Partial<Omit<Customer, 'id' | 'createdAt'>>) => void;
+  onDeleteCustomer?: (customerId: string) => void;
   onAddSession: (session: Omit<Session, 'id' | 'startTime' | 'status' | 'totalCost' | 'hours'>) => void;
   onUpdateSession: (sessionId: string, updates: Partial<Session>) => void;
   onEndSession: (sessionId: string) => void;
@@ -53,6 +55,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   logs,
   onLogout, 
   onAddCustomer, 
+  onUpdateCustomer,
+  onDeleteCustomer,
   onAddSession, 
   onUpdateSession, 
   onEndSession,
@@ -89,7 +93,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       case 'overview':
         return <Overview customers={customers} sessions={sessions} user={user} />;
       case 'customers':
-        return <CustomerManagement customers={customers} onAddCustomer={onAddCustomer} user={user} />;
+        return <CustomerManagement customers={customers} onAddCustomer={onAddCustomer} user={user} onUpdateCustomer={onUpdateCustomer} onDeleteCustomer={onDeleteCustomer} />;
       case 'sessions':
         return <SessionManagement customers={customers} sessions={sessions} tables={tables} onAddSession={onAddSession} onUpdateSession={onUpdateSession} onEndSession={onEndSession} user={user} />;
       case 'analytics':

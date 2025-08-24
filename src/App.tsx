@@ -165,6 +165,18 @@ const App: React.FC = () => {
     addLog('customer_add', 'Customer Added', `Added customer: ${customerData.name} (${customerData.email})`);
   };
 
+  const updateCustomer = (customerId: string, updates: Partial<Omit<Customer, 'id' | 'createdAt'>>) => {
+    setCustomers(prev => prev.map(c => c.id === customerId ? { ...c, ...updates } : c));
+    const updated = customers.find(c => c.id === customerId);
+    addLog('customer_edit', 'Customer Updated', `Updated customer: ${updated?.name || 'Unknown'}`);
+  };
+
+  const deleteCustomer = (customerId: string) => {
+    const removed = customers.find(c => c.id === customerId);
+    setCustomers(prev => prev.filter(c => c.id !== customerId));
+    addLog('customer_delete', 'Customer Deleted', `Deleted customer: ${removed?.name || 'Unknown'}`);
+  };
+
   const addSession = (sessionData: Omit<Session, 'id' | 'startTime' | 'status' | 'totalCost' | 'hours'>) => {
     // Validate table assignment before creating session
     if (sessionData.tableId) {
@@ -561,6 +573,8 @@ const App: React.FC = () => {
       logs={logs}
       onLogout={handleLogout}
       onAddCustomer={addCustomer}
+      onUpdateCustomer={updateCustomer}
+      onDeleteCustomer={deleteCustomer}
       onAddSession={addSession}
       onUpdateSession={updateSession}
       onEndSession={endSession}
