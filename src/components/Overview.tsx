@@ -1,16 +1,17 @@
 import React from 'react';
 import JumanjiStatsCard from './JumanjiStatsCard';
 import JumanjiCard from './JumanjiCard';
-import { User, Customer, Session } from '../types';
+import { User, Customer, Session, Payment } from '../types';
 import { startOfMonth, endOfMonth } from 'date-fns';
 
 interface OverviewProps {
   customers: Customer[];
   sessions: Session[];
+  payments: Payment[];
   user: User;
 }
 
-const Overview: React.FC<OverviewProps> = ({ customers, sessions, user }) => {
+const Overview: React.FC<OverviewProps> = ({ customers, sessions, payments, user }) => {
   const getRecentSessions = () => {
     return sessions
       .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
@@ -42,7 +43,7 @@ const Overview: React.FC<OverviewProps> = ({ customers, sessions, user }) => {
       .slice(0, 5);
   };
 
-  // Calculate monthly metrics
+  // Calculate monthly metrics (revenue comes from completed payments only)
   const getMonthlyMetrics = () => {
     const now = new Date();
     const monthStart = startOfMonth(now);
@@ -53,7 +54,13 @@ const Overview: React.FC<OverviewProps> = ({ customers, sessions, user }) => {
       return sessionDate >= monthStart && sessionDate <= monthEnd;
     });
 
-    const monthlyRevenue = monthlySessions.reduce((sum, session) => sum + (session.totalCost || 0), 0);
+    const monthlyRevenue = payments
+      .filter(p => p.status === 'completed')
+      .filter(p => {
+        const dt = new Date(p.timestamp);
+        return dt >= monthStart && dt <= monthEnd;
+      })
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
     const monthlyHours = monthlySessions.reduce((sum, session) => sum + (session.hours || 0), 0);
     const monthlyActiveSessions = monthlySessions.filter(session => session.status === 'active').length;
 

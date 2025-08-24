@@ -128,12 +128,43 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({
   };
 
   const getMethodStats = () => {
-    const methodCounts = paymentMethods.map(method => ({
-      ...method,
-      count: payments.filter(p => p.method === method.value).length,
-      amount: payments.filter(p => p.method === method.value && p.status === 'completed').reduce((sum, p) => sum + p.amount, 0)
+    const totals: Record<string, { count: number; amount: number }> = {
+      cash: { count: 0, amount: 0 },
+      card: { count: 0, amount: 0 },
+      online: { count: 0, amount: 0 },
+      mixed: { count: 0, amount: 0 }
+    };
+
+    for (const p of payments) {
+      if (p.method === 'mixed') {
+        // Mixed counts as one mixed payment
+        totals.mixed.count += 1;
+        if (p.status === 'completed') totals.mixed.amount += p.amount;
+
+        // Also distribute its components to cash/card/online
+        if ((p.cashAmount || 0) > 0) {
+          totals.cash.count += 1;
+          if (p.status === 'completed') totals.cash.amount += p.cashAmount || 0;
+        }
+        if ((p.cardAmount || 0) > 0) {
+          totals.card.count += 1;
+          if (p.status === 'completed') totals.card.amount += p.cardAmount || 0;
+        }
+        if ((p.onlineAmount || 0) > 0) {
+          totals.online.count += 1;
+          if (p.status === 'completed') totals.online.amount += p.onlineAmount || 0;
+        }
+      } else {
+        totals[p.method].count += 1;
+        if (p.status === 'completed') totals[p.method].amount += p.amount;
+      }
+    }
+
+    return paymentMethods.map(m => ({
+      ...m,
+      count: totals[m.value].count,
+      amount: totals[m.value].amount
     }));
-    return methodCounts;
   };
 
   const stats = getPaymentStats();

@@ -91,7 +91,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
-        return <Overview customers={customers} sessions={sessions} user={user} />;
+        return <Overview customers={customers} sessions={sessions} payments={payments} user={user} />;
       case 'customers':
         return <CustomerManagement customers={customers} onAddCustomer={onAddCustomer} user={user} onUpdateCustomer={onUpdateCustomer} onDeleteCustomer={onDeleteCustomer} />;
       case 'sessions':
@@ -141,7 +141,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         }
         return <ActivityLogComponent logs={logs} user={user} onClearAllLogs={onClearAllLogs} />;
       default:
-        return <Overview customers={customers} sessions={sessions} user={user} />;
+        return <Overview customers={customers} sessions={sessions} payments={payments} user={user} />;
     }
   };
 
