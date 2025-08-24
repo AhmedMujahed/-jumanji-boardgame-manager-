@@ -3,6 +3,8 @@ import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import { User, Customer, Session, Game, Payment, Table, Reservation, ActivityLog, TableStatus } from './types';
 import { getAllTables, validateTableAssignment, checkTableConflicts } from './utils/tableManagement';
+import { initRealtime, startPresence, notifyAll } from './realtime';
+import { watchSessions } from './realtimeDb';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(() => {
@@ -137,6 +139,9 @@ const App: React.FC = () => {
   const handleLogin = (userData: User) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
+    // Persist minimal identity for realtime presence/filters
+    localStorage.setItem('username', userData.username);
+    localStorage.setItem('role', userData.role === 'owner' ? 'owner' : 'gm');
     addLog('user_login', 'User Login', `User ${userData.username} (${userData.role}) logged in`);
   };
 
@@ -184,6 +189,8 @@ const App: React.FC = () => {
       hours: 0
     };
     setSessions(prev => [...prev, newSession]);
+    // Broadcast to all clients
+    notifyAll('session:update', { id: newSession.id, status: 'active' });
     
     // Update table status to occupied
     if (sessionData.tableId) {
@@ -254,6 +261,8 @@ const App: React.FC = () => {
     
     const customer = customers.find(c => c.id === session?.customerId);
     addLog('session_end', 'Session Ended', `Ended session for customer: ${customer?.name || 'Unknown'} - ${session?.capacity || 0} people - Duration: ${session?.hours || 0}h, Cost: ${session?.totalCost || 0} SAR`);
+    // Broadcast completion
+    notifyAll('session:update', { id: sessionId, status: 'completed' });
   };
 
   // New handlers for the 4 features
@@ -434,6 +443,30 @@ const App: React.FC = () => {
       setLogs([clearLog]);
     }
   };
+
+  // Realtime wiring
+  useEffect(() => {
+    if (!user) return;
+    const role = (localStorage.getItem('role') || 'gm') as 'owner' | 'gm';
+    const userId = localStorage.getItem('username') || user.username || 'anon';
+
+    initRealtime((evt) => {
+      if (evt.type === 'analytics:update' && role !== 'owner') return;
+      // For session updates we could refetch or patch local state.
+      // Minimal: no-op; hooks exist for future integration.
+    });
+
+    startPresence(userId, role);
+    const sub = watchSessions(() => {
+      // Hook for durable DB changes. In a future step, refetch sessions from API.
+    });
+
+    return () => {
+      // Best-effort unsubscribe if available
+      // @ts-ignore - supabase channel returns object with unsubscribe in v2
+      sub?.unsubscribe && sub.unsubscribe();
+    };
+  }, [user]);
 
   if (!user) {
     return <Login onLogin={handleLogin} />;
