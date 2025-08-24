@@ -109,6 +109,12 @@ export interface Game {
   isAvailable: boolean;
   location?: string;
   features: string[];
+  // Added fields for better library management
+  ageRecommendation?: string; // e.g., "8+", "12+"
+  tags?: string[]; // e.g., ['co-op', 'dice']
+  copiesAvailable?: number; // inventory tracking
+  forSale?: boolean; // available for sale
+  price?: number; // price when forSale is true
   createdAt: string;
 }
 

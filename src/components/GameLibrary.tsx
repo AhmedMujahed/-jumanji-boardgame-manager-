@@ -21,7 +21,28 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
     maxPlayers: 4,
     duration: 60,
     difficulty: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
-    isAvailable: true
+    isAvailable: true,
+    ageRecommendation: '',
+    tags: '',
+    copiesAvailable: 1,
+    forSale: false,
+    price: 0
+  });
+  const [editingGameId, setEditingGameId] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    description: '',
+    category: '',
+    minPlayers: 1,
+    maxPlayers: 4,
+    duration: 60,
+    difficulty: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
+    isAvailable: true,
+    ageRecommendation: '',
+    tags: '',
+    copiesAvailable: 1,
+    forSale: false,
+    price: 0
   });
 
   const categories = ['Strategy', 'Party', 'Adventure', 'Puzzle', 'Card', 'Dice', 'RPG', 'Other'];
@@ -33,8 +54,16 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const tagsArray = formData.tags
+      .split(',')
+      .map(t => t.trim())
+      .filter(t => t.length > 0);
     onAddGame({
       ...formData,
+      tags: tagsArray,
+      copiesAvailable: Number(formData.copiesAvailable) || 0,
+      forSale: formData.forSale,
+      price: formData.forSale ? Number(formData.price) || 0 : undefined,
       features: [],
       createdAt: new Date().toISOString()
     });
@@ -46,7 +75,12 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
       maxPlayers: 4,
       duration: 60,
       difficulty: 'beginner',
-      isAvailable: true
+      isAvailable: true,
+      ageRecommendation: '',
+      tags: '',
+      copiesAvailable: 1,
+      forSale: false,
+      price: 0
     });
     setShowAddForm(false);
   };
@@ -57,6 +91,58 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
       ...prev,
       [name]: type === 'number' ? parseInt(value) : type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
+  };
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: type === 'number' ? parseInt(value) : type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+    }));
+  };
+
+  const openEdit = (game: Game) => {
+    setEditingGameId(game.id);
+    setEditFormData({
+      name: game.name,
+      description: game.description,
+      category: game.category,
+      minPlayers: game.minPlayers,
+      maxPlayers: game.maxPlayers,
+      duration: game.duration,
+      difficulty: game.difficulty,
+      isAvailable: game.isAvailable,
+      ageRecommendation: game.ageRecommendation || '',
+      tags: (game.tags || []).join(', '),
+      copiesAvailable: game.copiesAvailable ?? 0,
+      forSale: game.forSale ?? false,
+      price: game.price ?? 0
+    });
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingGameId) return;
+    const tagsArray = editFormData.tags
+      .split(',')
+      .map(t => t.trim())
+      .filter(t => t.length > 0);
+    onUpdateGame(editingGameId, {
+      name: editFormData.name,
+      description: editFormData.description,
+      category: editFormData.category,
+      minPlayers: editFormData.minPlayers,
+      maxPlayers: editFormData.maxPlayers,
+      duration: editFormData.duration,
+      difficulty: editFormData.difficulty,
+      isAvailable: editFormData.isAvailable,
+      ageRecommendation: editFormData.ageRecommendation || undefined,
+      tags: tagsArray,
+      copiesAvailable: Number(editFormData.copiesAvailable) || 0,
+      forSale: editFormData.forSale,
+      price: editFormData.forSale ? Number(editFormData.price) || 0 : undefined
+    });
+    setEditingGameId(null);
   };
 
   const filteredGames = games.filter(game => {
@@ -277,6 +363,82 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
                 />
               </div>
 
+              {/* Age Recommendation */}
+              <div>
+                <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
+                  Age Recommendation
+                </label>
+                <input
+                  type="text"
+                  name="ageRecommendation"
+                  value={formData.ageRecommendation}
+                  onChange={handleInputChange}
+                  placeholder="e.g., 8+, 12+, 18+"
+                  className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 font-arcade transition-all duration-300"
+                />
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
+                  Tags (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  name="tags"
+                  value={formData.tags}
+                  onChange={handleInputChange}
+                  placeholder="co-op, dice, cards, trivia"
+                  className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 font-arcade transition-all duration-300"
+                />
+              </div>
+
+              {/* Copies Available */}
+              <div>
+                <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
+                  Copies Available
+                </label>
+                <input
+                  type="number"
+                  name="copiesAvailable"
+                  value={formData.copiesAvailable}
+                  onChange={handleInputChange}
+                  min="0"
+                  className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300"
+                />
+              </div>
+
+              {/* For Sale & Price */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    name="forSale"
+                    checked={formData.forSale}
+                    onChange={handleInputChange}
+                    className="w-5 h-5 text-neon-bright border-2 border-neon-bright rounded focus:ring-neon-glow"
+                  />
+                  <label className="text-void-800 dark:text-neon-bright font-arcade font-bold">
+                    Game is for sale
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
+                    Price (SAR)
+                  </label>
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleInputChange}
+                    min="0"
+                    step="0.01"
+                    disabled={!formData.forSale}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300 ${formData.forSale ? 'border-neon-bright' : 'border-void-500/50 opacity-70'}`}
+                  />
+                </div>
+              </div>
+
               <div className="flex items-center space-x-3">
                 <input
                   type="checkbox"
@@ -340,6 +502,11 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
                     <span className="px-2 py-1 bg-neon-bright/20 text-neon-bright border border-neon-bright rounded-full text-xs font-arcade font-bold">
                       {game.category}
                     </span>
+                    {game.ageRecommendation && (
+                      <span className="px-2 py-1 bg-blue-500/20 text-blue-300 border border-blue-500 rounded-full text-xs font-arcade font-bold">
+                        {game.ageRecommendation}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className={`w-3 h-3 rounded-full ${
@@ -380,6 +547,27 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
                 </div>
               </div>
 
+              {/* Tags and inventory */}
+              <div className="mb-4 flex flex-wrap gap-2">
+                {(game.tags || []).slice(0, 4).map(tag => (
+                  <span key={tag} className="px-2 py-1 bg-void-700/40 text-neon-bright/90 border border-neon-bright/30 rounded-full text-xs font-arcade font-bold">
+                    #{tag}
+                  </span>
+                ))}
+                {typeof game.copiesAvailable === 'number' && (
+                  <span className="ml-auto px-2 py-1 bg-purple-500/20 text-purple-300 border border-purple-500 rounded-full text-xs font-arcade font-bold">
+                    🗃️ {game.copiesAvailable} copies
+                  </span>
+                )}
+              </div>
+
+              {/* For sale badge */}
+              {game.forSale && typeof game.price === 'number' && (
+                <div className="mb-4 px-3 py-2 bg-success-500/10 text-success-400 border border-success-500 rounded-xl font-arcade font-bold text-sm">
+                  💸 For Sale: {game.price} SAR
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex space-x-2">
                 <button 
@@ -393,6 +581,12 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
                   {game.isAvailable ? 'Mark Unavailable' : 'Mark Available'}
                 </button>
                 <button 
+                  onClick={() => openEdit(game)}
+                  className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-300"
+                >
+                  Edit
+                </button>
+                <button 
                   onClick={() => onDeleteGame(game.id)}
                   className="px-3 py-2 bg-danger-600 hover:bg-danger-700 text-white rounded-lg transition-all duration-300"
                   title="Delete game"
@@ -404,6 +598,104 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
           </div>
         ))}
       </div>
+
+      {/* Edit Game Modal */}
+      {editingGameId && (
+        <ModalPortal>
+          <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999]">
+            <div className="bg-[#0D0D1A] p-6 rounded-2xl shadow-lg w-full max-w-2xl mx-4 animate-fade-in max-h-[90vh] overflow-y-auto border-2 border-neon-bright">
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center space-x-3">
+                  <span className="text-3xl">✏️</span>
+                  <h3 className="text-2xl font-arcade font-black text-gold-bright">
+                    Edit Game
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setEditingGameId(null)}
+                  className="p-2 bg-light-200 dark:bg-void-800 hover:bg-light-300 dark:hover:bg-void-700 text-danger-400 rounded-lg transition-all duration-300 text-xl font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEdit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Game Name *</label>
+                    <input type="text" name="name" value={editFormData.name} onChange={handleEditInputChange} required className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 transition-all duration-300 font-arcade" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Category</label>
+                    <select name="category" value={editFormData.category} onChange={handleEditInputChange} className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300">
+                      <option value="">Select category</option>
+                      {categories.map(category => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Min Players</label>
+                    <input type="number" name="minPlayers" value={editFormData.minPlayers} onChange={handleEditInputChange} min="1" max="20" className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Max Players</label>
+                    <input type="number" name="maxPlayers" value={editFormData.maxPlayers} onChange={handleEditInputChange} min="1" max="20" className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Duration (minutes)</label>
+                    <input type="number" name="duration" value={editFormData.duration} onChange={handleEditInputChange} min="5" max="480" className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Difficulty</label>
+                    <select name="difficulty" value={editFormData.difficulty} onChange={handleEditInputChange} className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300">
+                      {difficulties.map(diff => (
+                        <option key={diff.value} value={diff.value}>{diff.icon} {diff.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Description</label>
+                  <textarea name="description" value={editFormData.description} onChange={handleEditInputChange} rows={3} className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 transition-all duration-300 font-arcade resize-vertical" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Age Recommendation</label>
+                  <input type="text" name="ageRecommendation" value={editFormData.ageRecommendation} onChange={handleEditInputChange} placeholder="e.g., 8+, 12+, 18+" className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 font-arcade transition-all duration-300" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Tags (comma-separated)</label>
+                  <input type="text" name="tags" value={editFormData.tags} onChange={handleEditInputChange} placeholder="co-op, dice, cards, trivia" className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 font-arcade transition-all duration-300" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Copies Available</label>
+                  <input type="number" name="copiesAvailable" value={editFormData.copiesAvailable} onChange={handleEditInputChange} min="0" className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300" />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-center space-x-3">
+                    <input type="checkbox" name="forSale" checked={editFormData.forSale} onChange={handleEditInputChange} className="w-5 h-5 text-neon-bright border-2 border-neon-bright rounded focus:ring-neon-glow" />
+                    <label className="text-void-800 dark:text-neon-bright font-arcade font-bold">Game is for sale</label>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Price (SAR)</label>
+                    <input type="number" name="price" value={editFormData.price} onChange={handleEditInputChange} min="0" step="0.01" disabled={!editFormData.forSale} className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300 ${editFormData.forSale ? 'border-neon-bright' : 'border-void-500/50 opacity-70'}`} />
+                  </div>
+                </div>
+
+                <div className="flex space-x-4 pt-4">
+                  <button type="button" onClick={() => setEditingGameId(null)} className="flex-1 px-4 py-3 bg-light-300 dark:bg-void-700 hover:bg-light-400 dark:hover:bg-void-600 text-void-800 dark:text-neon-bright font-arcade font-bold rounded-xl transition-all duration-300 border-2 border-light-400 dark:border-void-600 hover:border-neon-bright/50">CANCEL</button>
+                  <button type="submit" className="flex-1 px-4 py-3 bg-gold-bright hover:bg-gold-neon text-void-1000 font-arcade font-black rounded-xl transition-all duration-300 transform hover:scale-105 shadow-gold hover:shadow-gold-lg border-2 border-gold-bright">SAVE CHANGES</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
 
       {/* Empty State */}
       {filteredGames.length === 0 && (
