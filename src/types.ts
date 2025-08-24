@@ -115,6 +115,7 @@ export interface Game {
   copiesAvailable?: number; // inventory tracking
   forSale?: boolean; // available for sale
   price?: number; // price when forSale is true
+  copiesForSale?: number; // track how many copies are for sale
   createdAt: string;
 }
 

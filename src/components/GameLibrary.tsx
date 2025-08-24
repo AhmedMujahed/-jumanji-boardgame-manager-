@@ -26,7 +26,8 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
     tags: '',
     copiesAvailable: 1,
     forSale: false,
-    price: 0
+    price: 0,
+    copiesForSale: 0
   });
   const [editingGameId, setEditingGameId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState({
@@ -42,7 +43,8 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
     tags: '',
     copiesAvailable: 1,
     forSale: false,
-    price: 0
+    price: 0,
+    copiesForSale: 0
   });
 
   const categories = ['Strategy', 'Party', 'Adventure', 'Puzzle', 'Card', 'Dice', 'RPG', 'Other'];
@@ -52,18 +54,75 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
     { value: 'advanced', label: 'Advanced', color: 'danger', icon: '⚡' }
   ];
 
+  const ageOptions = ['4+','6+','8+','10+','12+','14+','16+','18+'];
+  const tagOptions = ['co-op','dice','cards','trivia','strategy','party','puzzle','adventure','rpg','family','solo','team','timed'];
+
+  const parseTags = (tagsString: string) => tagsString
+    .split(',')
+    .map(t => t.trim())
+    .filter(t => t.length > 0);
+
+  const toggleTag = (tag: string) => {
+    const current = new Set(parseTags(formData.tags));
+    if (current.has(tag)) current.delete(tag); else current.add(tag);
+    setFormData(prev => ({ ...prev, tags: Array.from(current).join(', ') }));
+  };
+
+  const toggleEditTag = (tag: string) => {
+    const current = new Set(parseTags(editFormData.tags));
+    if (current.has(tag)) current.delete(tag); else current.add(tag);
+    setEditFormData(prev => ({ ...prev, tags: Array.from(current).join(', ') }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const tagsArray = formData.tags
       .split(',')
       .map(t => t.trim())
       .filter(t => t.length > 0);
+
+    // Required field validations
+    if (!formData.name.trim()) {
+      alert('Game name is required');
+      return;
+    }
+    if (!formData.category) {
+      alert('Category is required');
+      return;
+    }
+    if (!formData.description.trim()) {
+      alert('Description is required');
+      return;
+    }
+    if (!formData.ageRecommendation.trim()) {
+      alert('Age recommendation is required');
+      return;
+    }
+    if (tagsArray.length === 0) {
+      alert('Please add at least one tag');
+      return;
+    }
+    if (isNaN(Number(formData.copiesAvailable))) {
+      alert('Copies in shop is required');
+      return;
+    }
+    if (formData.forSale) {
+      if (!(Number(formData.price) > 0)) {
+        alert('Price is required and must be greater than 0');
+        return;
+      }
+      if (!(Number(formData.copiesForSale) >= 1)) {
+        alert('Copies for sale is required and must be at least 1');
+        return;
+      }
+    }
     onAddGame({
       ...formData,
       tags: tagsArray,
       copiesAvailable: Number(formData.copiesAvailable) || 0,
       forSale: formData.forSale,
       price: formData.forSale ? Number(formData.price) || 0 : undefined,
+      copiesForSale: formData.forSale ? Number(formData.copiesForSale) || 0 : 0,
       features: [],
       createdAt: new Date().toISOString()
     });
@@ -80,7 +139,8 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
       tags: '',
       copiesAvailable: 1,
       forSale: false,
-      price: 0
+      price: 0,
+      copiesForSale: 0
     });
     setShowAddForm(false);
   };
@@ -116,7 +176,8 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
       tags: (game.tags || []).join(', '),
       copiesAvailable: game.copiesAvailable ?? 0,
       forSale: game.forSale ?? false,
-      price: game.price ?? 0
+      price: game.price ?? 0,
+      copiesForSale: game.copiesForSale ?? 0
     });
   };
 
@@ -127,6 +188,42 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
       .split(',')
       .map(t => t.trim())
       .filter(t => t.length > 0);
+
+    // Required field validations for edit
+    if (!editFormData.name.trim()) {
+      alert('Game name is required');
+      return;
+    }
+    if (!editFormData.category) {
+      alert('Category is required');
+      return;
+    }
+    if (!editFormData.description.trim()) {
+      alert('Description is required');
+      return;
+    }
+    if (!editFormData.ageRecommendation.trim()) {
+      alert('Age recommendation is required');
+      return;
+    }
+    if (tagsArray.length === 0) {
+      alert('Please add at least one tag');
+      return;
+    }
+    if (isNaN(Number(editFormData.copiesAvailable))) {
+      alert('Copies in shop is required');
+      return;
+    }
+    if (editFormData.forSale) {
+      if (!(Number(editFormData.price) > 0)) {
+        alert('Price is required and must be greater than 0');
+        return;
+      }
+      if (!(Number(editFormData.copiesForSale) >= 1)) {
+        alert('Copies for sale is required and must be at least 1');
+        return;
+      }
+    }
     onUpdateGame(editingGameId, {
       name: editFormData.name,
       description: editFormData.description,
@@ -140,15 +237,25 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
       tags: tagsArray,
       copiesAvailable: Number(editFormData.copiesAvailable) || 0,
       forSale: editFormData.forSale,
-      price: editFormData.forSale ? Number(editFormData.price) || 0 : undefined
+      price: editFormData.forSale ? Number(editFormData.price) || 0 : undefined,
+      copiesForSale: editFormData.forSale ? Number(editFormData.copiesForSale) || 0 : 0
     });
     setEditingGameId(null);
   };
 
   const filteredGames = games.filter(game => {
     const matchesCategory = selectedCategory === 'all' || game.category === selectedCategory;
-    const matchesSearch = game.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         game.description.toLowerCase().includes(searchTerm.toLowerCase());
+    let matchesSearch = true;
+    if (searchTerm.startsWith('#tag:')) {
+      const tag = searchTerm.replace('#tag:', '').trim();
+      matchesSearch = tag === '' || (game.tags || []).some(t => t.toLowerCase() === tag.toLowerCase());
+    } else if (searchTerm.startsWith('#age:')) {
+      const age = searchTerm.replace('#age:', '').trim();
+      matchesSearch = age === '' || (game.ageRecommendation || '').toLowerCase() === age.toLowerCase();
+    } else {
+      matchesSearch = game.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        game.description.toLowerCase().includes(searchTerm.toLowerCase());
+    }
     return matchesCategory && matchesSearch;
   });
 
@@ -196,17 +303,11 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
 
       {/* Filters and Search */}
       <div className="bg-light-100 dark:bg-void-900/90 backdrop-blur-md rounded-3xl border-2 border-neon-bright/50 dark:border-neon-bright p-6 transition-colors duration-300">
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Category Filter */}
-          <div className="flex-1">
-            <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-              Category Filter
-            </label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300"
-            >
+          <div>
+            <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Category</label>
+            <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300">
               <option value="all">All Categories</option>
               {categories.map(category => (
                 <option key={category} value={category}>{category}</option>
@@ -214,20 +315,35 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
             </select>
           </div>
 
-          {/* Search */}
-          <div className="flex-1">
-            <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-              Search Games
-            </label>
-            <input
-              type="text"
-              placeholder="Search by name or description..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 font-arcade transition-all duration-300"
-            />
+          {/* Tag Filter */}
+          <div>
+            <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Tag</label>
+            <select onChange={(e) => setSearchTerm(`#tag:${e.target.value}`)} className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300">
+              <option value="">All Tags</option>
+              {tagOptions.map(tag => (
+                <option key={tag} value={tag}>{tag}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Age Filter */}
+          <div>
+            <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Age</label>
+            <select onChange={(e) => setSearchTerm(`#age:${e.target.value}`)} className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300">
+              <option value="">All Ages</option>
+              {ageOptions.map(a => (
+                <option key={a} value={a}>{a}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Free-text Search */}
+          <div>
+            <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Search</label>
+            <input type="text" placeholder="Search by name or description..." value={searchTerm.startsWith('#') ? '' : searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 font-arcade transition-all duration-300" />
           </div>
         </div>
+        <div className="mt-2 text-neon-bright/60 text-xs font-arcade">Tip: Use tag and age dropdowns to filter quickly.</div>
       </div>
 
       {/* Add Game Modal */}
@@ -270,12 +386,13 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
 
                 <div>
                   <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                    Category
+                    Category *
                   </label>
                   <select
                     name="category"
                     value={formData.category}
                     onChange={handleInputChange}
+                    required
                     className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300"
                   >
                     <option value="">Select category</option>
@@ -287,7 +404,7 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
 
                 <div>
                   <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                    Min Players
+                    Min Players *
                   </label>
                   <input
                     type="number"
@@ -296,13 +413,14 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
                     onChange={handleInputChange}
                     min="1"
                     max="20"
+                    required
                     className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                    Max Players
+                    Max Players *
                   </label>
                   <input
                     type="number"
@@ -311,13 +429,14 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
                     onChange={handleInputChange}
                     min="1"
                     max="20"
+                    required
                     className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                    Duration (minutes)
+                    Duration (minutes) *
                   </label>
                   <input
                     type="number"
@@ -326,18 +445,20 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
                     onChange={handleInputChange}
                     min="5"
                     max="480"
+                    required
                     className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                    Difficulty
+                    Difficulty *
                   </label>
                   <select
                     name="difficulty"
                     value={formData.difficulty}
                     onChange={handleInputChange}
+                    required
                     className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300"
                   >
                     {difficulties.map(diff => (
@@ -351,7 +472,7 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
 
               <div>
                 <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                  Description
+                  Description *
                 </label>
                 <textarea
                   name="description"
@@ -359,6 +480,7 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
                   onChange={handleInputChange}
                   placeholder="Describe the game..."
                   rows={3}
+                  required
                   className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 transition-all duration-300 font-arcade resize-vertical"
                 />
               </div>
@@ -366,14 +488,25 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
               {/* Age Recommendation */}
               <div>
                 <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                  Age Recommendation
+                  Age Recommendation *
                 </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {ageOptions.map(opt => {
+                    const isActive = formData.ageRecommendation === opt;
+                    return (
+                      <button key={opt} type="button" onClick={() => setFormData(prev => ({ ...prev, ageRecommendation: opt }))} className={`px-3 py-1 rounded-full text-xs font-arcade font-bold border transition-colors ${isActive ? 'bg-blue-500/20 text-blue-300 border-blue-500' : 'bg-void-700/30 text-neon-bright/80 border-neon-bright/30'}`}>
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
                 <input
                   type="text"
                   name="ageRecommendation"
                   value={formData.ageRecommendation}
                   onChange={handleInputChange}
                   placeholder="e.g., 8+, 12+, 18+"
+                  required
                   className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 font-arcade transition-all duration-300"
                 />
               </div>
@@ -381,22 +514,33 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
               {/* Tags */}
               <div>
                 <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                  Tags (comma-separated)
+                  Tags (click to toggle) *
                 </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {tagOptions.map(tag => {
+                    const selected = new Set(parseTags(formData.tags)).has(tag);
+                    return (
+                      <button key={tag} type="button" onClick={() => toggleTag(tag)} className={`px-3 py-1 rounded-full text-xs font-arcade font-bold border transition-colors ${selected ? 'bg-neon-bright/20 text-neon-bright border-neon-bright' : 'bg-void-700/30 text-neon-bright/80 border-neon-bright/30'}`}>
+                        #{tag}
+                      </button>
+                    );
+                  })}
+                </div>
                 <input
                   type="text"
                   name="tags"
                   value={formData.tags}
                   onChange={handleInputChange}
                   placeholder="co-op, dice, cards, trivia"
+                  required
                   className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 font-arcade transition-all duration-300"
                 />
               </div>
 
-              {/* Copies Available */}
+              {/* Copies in Shop */}
               <div>
                 <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                  Copies Available
+                  Copies in Shop *
                 </label>
                 <input
                   type="number"
@@ -404,6 +548,7 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
                   value={formData.copiesAvailable}
                   onChange={handleInputChange}
                   min="0"
+                  required
                   className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300"
                 />
               </div>
@@ -424,7 +569,7 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
                 </div>
                 <div>
                   <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                    Price (SAR)
+                    Price (SAR) {formData.forSale ? '*' : ''}
                   </label>
                   <input
                     type="number"
@@ -434,6 +579,20 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
                     min="0"
                     step="0.01"
                     disabled={!formData.forSale}
+                    required={formData.forSale}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300 ${formData.forSale ? 'border-neon-bright' : 'border-void-500/50 opacity-70'}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Copies For Sale {formData.forSale ? '*' : ''}</label>
+                  <input
+                    type="number"
+                    name="copiesForSale"
+                    value={formData.copiesForSale}
+                    onChange={handleInputChange}
+                    min="0"
+                    disabled={!formData.forSale}
+                    required={formData.forSale}
                     className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300 ${formData.forSale ? 'border-neon-bright' : 'border-void-500/50 opacity-70'}`}
                   />
                 </div>
@@ -562,9 +721,12 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
               </div>
 
               {/* For sale badge */}
-              {game.forSale && typeof game.price === 'number' && (
-                <div className="mb-4 px-3 py-2 bg-success-500/10 text-success-400 border border-success-500 rounded-xl font-arcade font-bold text-sm">
-                  💸 For Sale: {game.price} SAR
+              {game.forSale && (
+                <div className="mb-4 px-3 py-2 bg-success-500/10 text-success-400 border border-success-500 rounded-xl font-arcade font-bold text-sm flex items-center justify-between">
+                  <span>💸 For Sale{typeof game.price === 'number' ? `: ${game.price} SAR` : ''}</span>
+                  {typeof game.copiesForSale === 'number' && (
+                    <span className="px-2 py-1 bg-success-500/20 text-success-300 border border-success-500 rounded-full text-xs">{game.copiesForSale} copies</span>
+                  )}
                 </div>
               )}
 
@@ -627,7 +789,7 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
                   </div>
                   <div>
                     <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Category</label>
-                    <select name="category" value={editFormData.category} onChange={handleEditInputChange} className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300">
+                    <select name="category" value={editFormData.category} onChange={handleEditInputChange} required className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300">
                       <option value="">Select category</option>
                       {categories.map(category => (
                         <option key={category} value={category}>{category}</option>
@@ -636,19 +798,19 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
                   </div>
                   <div>
                     <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Min Players</label>
-                    <input type="number" name="minPlayers" value={editFormData.minPlayers} onChange={handleEditInputChange} min="1" max="20" className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300" />
+                    <input type="number" name="minPlayers" value={editFormData.minPlayers} onChange={handleEditInputChange} min="1" max="20" required className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300" />
                   </div>
                   <div>
                     <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Max Players</label>
-                    <input type="number" name="maxPlayers" value={editFormData.maxPlayers} onChange={handleEditInputChange} min="1" max="20" className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300" />
+                    <input type="number" name="maxPlayers" value={editFormData.maxPlayers} onChange={handleEditInputChange} min="1" max="20" required className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300" />
                   </div>
                   <div>
                     <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Duration (minutes)</label>
-                    <input type="number" name="duration" value={editFormData.duration} onChange={handleEditInputChange} min="5" max="480" className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300" />
+                    <input type="number" name="duration" value={editFormData.duration} onChange={handleEditInputChange} min="5" max="480" required className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300" />
                   </div>
                   <div>
                     <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Difficulty</label>
-                    <select name="difficulty" value={editFormData.difficulty} onChange={handleEditInputChange} className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300">
+                    <select name="difficulty" value={editFormData.difficulty} onChange={handleEditInputChange} required className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300">
                       {difficulties.map(diff => (
                         <option key={diff.value} value={diff.value}>{diff.icon} {diff.label}</option>
                       ))}
@@ -658,22 +820,42 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
 
                 <div>
                   <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Description</label>
-                  <textarea name="description" value={editFormData.description} onChange={handleEditInputChange} rows={3} className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 transition-all duration-300 font-arcade resize-vertical" />
+                  <textarea name="description" value={editFormData.description} onChange={handleEditInputChange} rows={3} required className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 transition-all duration-300 font-arcade resize-vertical" />
                 </div>
 
                 <div>
                   <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Age Recommendation</label>
-                  <input type="text" name="ageRecommendation" value={editFormData.ageRecommendation} onChange={handleEditInputChange} placeholder="e.g., 8+, 12+, 18+" className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 font-arcade transition-all duration-300" />
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {ageOptions.map(opt => {
+                      const isActive = editFormData.ageRecommendation === opt;
+                      return (
+                        <button key={opt} type="button" onClick={() => setEditFormData(prev => ({ ...prev, ageRecommendation: opt }))} className={`px-3 py-1 rounded-full text-xs font-arcade font-bold border transition-colors ${isActive ? 'bg-blue-500/20 text-blue-300 border-blue-500' : 'bg-void-700/30 text-neon-bright/80 border-neon-bright/30'}`}>
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <input type="text" name="ageRecommendation" value={editFormData.ageRecommendation} onChange={handleEditInputChange} placeholder="e.g., 8+, 12+, 18+" required className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 font-arcade transition-all duration-300" />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Tags (comma-separated)</label>
-                  <input type="text" name="tags" value={editFormData.tags} onChange={handleEditInputChange} placeholder="co-op, dice, cards, trivia" className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 font-arcade transition-all duration-300" />
+                  <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Tags (click to toggle)</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {tagOptions.map(tag => {
+                      const selected = new Set(parseTags(editFormData.tags)).has(tag);
+                      return (
+                        <button key={tag} type="button" onClick={() => toggleEditTag(tag)} className={`px-3 py-1 rounded-full text-xs font-arcade font-bold border transition-colors ${selected ? 'bg-neon-bright/20 text-neon-bright border-neon-bright' : 'bg-void-700/30 text-neon-bright/80 border-neon-bright/30'}`}>
+                          #{tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <input type="text" name="tags" value={editFormData.tags} onChange={handleEditInputChange} placeholder="co-op, dice, cards, trivia" required className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 font-arcade transition-all duration-300" />
                 </div>
 
                 <div>
                   <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Copies Available</label>
-                  <input type="number" name="copiesAvailable" value={editFormData.copiesAvailable} onChange={handleEditInputChange} min="0" className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300" />
+                  <input type="number" name="copiesAvailable" value={editFormData.copiesAvailable} onChange={handleEditInputChange} min="0" required className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300" />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -683,7 +865,11 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
                   </div>
                   <div>
                     <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Price (SAR)</label>
-                    <input type="number" name="price" value={editFormData.price} onChange={handleEditInputChange} min="0" step="0.01" disabled={!editFormData.forSale} className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300 ${editFormData.forSale ? 'border-neon-bright' : 'border-void-500/50 opacity-70'}`} />
+                    <input type="number" name="price" value={editFormData.price} onChange={handleEditInputChange} min="0" step="0.01" disabled={!editFormData.forSale} required={editFormData.forSale} className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300 ${editFormData.forSale ? 'border-neon-bright' : 'border-void-500/50 opacity-70'}`} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">Copies For Sale</label>
+                    <input type="number" name="copiesForSale" value={editFormData.copiesForSale} onChange={handleEditInputChange} min="0" disabled={!editFormData.forSale} required={editFormData.forSale} className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300 ${editFormData.forSale ? 'border-neon-bright' : 'border-void-500/50 opacity-70'}`} />
                   </div>
                 </div>
 
