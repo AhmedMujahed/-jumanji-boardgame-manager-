@@ -7,20 +7,50 @@ interface LoginProps {
   onLogin: (userData: User) => void;
 }
 
+// Predefined user accounts
+const PREDEFINED_ACCOUNTS = {
+  'jumanji_owner': {
+    id: 'owner-001',
+    username: 'jumanji_owner',
+    password: 'OwN3r!2024#JMN',
+    role: 'owner' as const,
+    displayName: 'Shop Owner'
+  },
+  'game_master': {
+    id: 'gm-001', 
+    username: 'game_master',
+    password: 'GM@2024!Jmn#',
+    role: 'game_master' as const,
+    displayName: 'Game Master'
+  }
+};
+
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [username, setUsername] = useState('');
-  const [role, setRole] = useState<'game_master' | 'owner' | 'admin' | 'employee'>('game_master');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username.trim()) {
-      onLogin({
-        id: Date.now().toString(),
-        username: username.trim(),
-        role: role,
-        createdAt: new Date().toISOString()
-      });
+    setError('');
+    // Normalize inputs to avoid whitespace/case issues
+    const normalizedUsername = username.trim().toLowerCase();
+    const normalizedPassword = password.trim();
+
+    const account = PREDEFINED_ACCOUNTS[normalizedUsername as keyof typeof PREDEFINED_ACCOUNTS];
+
+    if (!account || account.password !== normalizedPassword) {
+      setError('Invalid username or password');
+      return;
     }
+
+    // Successful login
+    onLogin({
+      id: account.id,
+      username: account.username,
+      role: account.role,
+      createdAt: new Date().toISOString()
+    });
   };
 
   return (
@@ -57,6 +87,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </p>
           </div>
           
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-danger-500/20 border-2 border-danger-400 rounded-xl">
+              <p className="text-danger-400 font-arcade text-center text-sm">
+                {error}
+              </p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="username" className="block text-sm font-arcade font-bold text-gold-bright mb-3">
@@ -74,18 +113,18 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
             
             <div>
-              <label htmlFor="role" className="block text-sm font-arcade font-bold text-gold-bright mb-3">
-                Role
+              <label htmlFor="password" className="block text-sm font-arcade font-bold text-gold-bright mb-3">
+                Password
               </label>
-              <select
-                id="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value as 'game_master' | 'owner' | 'admin' | 'employee')}
-                className="w-full px-4 py-4 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white transition-all duration-300 font-arcade text-lg"
-              >
-                <option value="game_master">🎮 Game Master</option>
-                <option value="owner">👑 Owner</option>
-              </select>
+              <input
+                type="password"
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                className="w-full px-4 py-4 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white placeholder-neon-bright/60 transition-all duration-300 font-arcade text-lg"
+              />
             </div>
             
             <button
@@ -97,22 +136,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </button>
           </form>
           
-          {/* Role Information */}
-          <div className="mt-8 p-6 bg-void-800/80 rounded-2xl border-2 border-gold-bright">
-            <h3 className="font-arcade font-bold text-gold-bright mb-4 text-center text-lg">
-              Role Permissions
-            </h3>
-            <div className="space-y-3 text-sm text-neon-bright/90">
-              <div className="flex items-center space-x-3">
-                <span className="text-2xl">🎮</span>
-                <span className="font-arcade"><strong>Game Master:</strong> Manage sessions and customers</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <span className="text-2xl">👑</span>
-                <span className="font-arcade"><strong>Owner:</strong> Full access to all features</span>
-              </div>
-            </div>
-          </div>
+          
         </div>
         
         {/* Footer */}
