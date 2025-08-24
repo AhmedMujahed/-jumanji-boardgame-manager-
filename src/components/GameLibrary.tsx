@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ModalPortal from './ModalPortal';
 import { Game } from '../types';
 
 interface GameLibraryProps {
@@ -145,8 +146,9 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
 
       {/* Add Game Modal */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-void-1000/90 backdrop-blur-sm flex items-center justify-center p-6 z-50">
-          <div className="bg-light-100 dark:bg-void-900/95 backdrop-blur-md rounded-3xl shadow-2xl border-2 border-neon-bright p-8 w-full max-w-2xl animate-fade-in max-h-[90vh] overflow-y-auto">
+        <ModalPortal>
+          <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999]">
+            <div className="bg-[#0D0D1A] p-6 rounded-2xl shadow-lg w-full max-w-2xl mx-4 animate-fade-in max-h-[90vh] overflow-y-auto border-2 border-neon-bright">
             {/* Modal Header */}
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center space-x-3">
@@ -304,8 +306,9 @@ const GameLibrary: React.FC<GameLibraryProps> = ({ games, onAddGame, onUpdateGam
                 </button>
               </div>
             </form>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* Games Grid */}

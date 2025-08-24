@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ModalPortal from './ModalPortal';
 import { Table, TableStatus } from '../types';
 import { resetAllTables } from '../utils/tableManagement';
 
@@ -295,124 +296,126 @@ const TableGrid: React.FC<TableGridProps> = ({
 
              {/* Table Information Modal */}
        {showTableInfo && selectedTable && (
-         <div className="fixed inset-0 bg-void-1000/90 backdrop-blur-sm flex items-center justify-center z-50">
-           <div className="bg-void-900/95 backdrop-blur-md rounded-3xl shadow-2xl border-2 border-neon-bright p-8 max-w-lg w-full mx-4 animate-fade-in">
-             <div className="flex justify-between items-center mb-6">
-               <div className="flex items-center space-x-3">
-                 <span className="text-3xl">🏠</span>
-                 <h3 className="text-2xl font-arcade font-black text-gold-bright">
-                   Table {selectedTable.tableNumber} Details
-                 </h3>
-               </div>
-               <button
-                 onClick={() => setShowTableInfo(false)}
-                 className="p-2 bg-void-800 hover:bg-void-700 text-danger-400 rounded-xl transition-all duration-300 text-xl font-bold hover:scale-110"
-               >
-                 ✕
-               </button>
-             </div>
-            
-                         <div className="space-y-4">
-               <div className="p-4 bg-void-800/50 rounded-xl border border-neon-bright/20">
-                 <div className="flex items-center justify-between">
-                   <span className="font-arcade font-bold text-neon-bright">Status:</span>
-                   <span className={`px-3 py-2 rounded-xl text-sm font-arcade font-bold ${
-                     getStatusStyle(selectedTable.status).bgColor
-                   } text-white border-2 border-white/20`}>
-                     {getStatusStyle(selectedTable.status).label}
-                   </span>
+         <ModalPortal>
+           <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999]">
+             <div className="bg-[#0D0D1A] p-6 rounded-2xl shadow-lg max-w-lg w-full mx-4 animate-fade-in border-2 border-neon-bright">
+               <div className="flex justify-between items-center mb-6">
+                 <div className="flex items-center space-x-3">
+                   <span className="text-3xl">🏠</span>
+                   <h3 className="text-2xl font-arcade font-black text-gold-bright">
+                     Table {selectedTable.tableNumber} Details
+                   </h3>
                  </div>
+                 <button
+                   onClick={() => setShowTableInfo(false)}
+                   className="p-2 bg-void-800 hover:bg-void-700 text-danger-400 rounded-xl transition-all duration-300 text-xl font-bold hover:scale-110"
+                 >
+                   ✕
+                 </button>
                </div>
-               
-               <div className="p-4 bg-void-800/50 rounded-xl border border-neon-bright/20">
-                 <div className="flex items-center justify-between">
-                   <span className="font-arcade font-bold text-neon-bright">Type:</span>
-                   <span className={`px-3 py-2 rounded-xl text-sm font-arcade font-bold ${getTypeColor(selectedTable.type)}`}>
-                     {selectedTable.type.toUpperCase()}
-                   </span>
-                 </div>
-               </div>
-               
-               <div className="p-4 bg-void-800/50 rounded-xl border border-neon-bright/20">
-                 <div className="flex items-center justify-between">
-                   <span className="font-arcade font-bold text-neon-bright">Capacity:</span>
-                   <span className="text-gold-bright font-arcade font-bold">{selectedTable.capacity} people</span>
-                 </div>
-               </div>
-               
-               <div className="p-4 bg-void-800/50 rounded-xl border border-neon-bright/20">
-                 <div className="flex items-center justify-between">
-                   <span className="font-arcade font-bold text-neon-bright">Location:</span>
-                   <span className="text-gold-bright font-arcade font-bold">{selectedTable.location}</span>
-                 </div>
-               </div>
-               
-               {selectedTable.customerName && (
-                 <div className="p-4 bg-danger-500/10 rounded-xl border border-danger-500/30">
+              
+                          <div className="space-y-4">
+                 <div className="p-4 bg-void-800/50 rounded-xl border border-neon-bright/20">
                    <div className="flex items-center justify-between">
-                     <span className="font-arcade font-bold text-danger-400">Customer:</span>
-                     <span className="text-danger-400 font-arcade font-bold">{selectedTable.customerName}</span>
-                   </div>
-                 </div>
-               )}
-               
-               {selectedTable.startTime && (
-                 <div className="p-4 bg-warning-500/10 rounded-xl border border-warning-500/30">
-                   <div className="flex items-center justify-between">
-                     <span className="font-arcade font-bold text-warning-400">Start Time:</span>
-                     <span className="text-warning-400 font-arcade font-bold">
-                       {new Date(selectedTable.startTime).toLocaleTimeString()}
+                     <span className="font-arcade font-bold text-neon-bright">Status:</span>
+                     <span className={`px-3 py-2 rounded-xl text-sm font-arcade font-bold ${
+                       getStatusStyle(selectedTable.status).bgColor
+                     } text-white border-2 border-white/20`}>
+                       {getStatusStyle(selectedTable.status).label}
                      </span>
                    </div>
                  </div>
-               )}
-               
-               {selectedTable.notes && (
-                 <div className="p-4 bg-info-500/10 rounded-xl border border-info-500/30">
+                 
+                 <div className="p-4 bg-void-800/50 rounded-xl border border-neon-bright/20">
                    <div className="flex items-center justify-between">
-                     <span className="font-arcade font-bold text-info-400">Notes:</span>
-                     <span className="text-info-400 font-arcade font-bold">{selectedTable.notes}</span>
+                     <span className="font-arcade font-bold text-neon-bright">Type:</span>
+                     <span className={`px-3 py-2 rounded-xl text-sm font-arcade font-bold ${getTypeColor(selectedTable.type)}`}>
+                       {selectedTable.type.toUpperCase()}
+                     </span>
                    </div>
                  </div>
-               )}
-             </div>
-            
-                         {/* Status Change Options */}
-             <div className="mt-8 space-y-4">
-               <h4 className="font-arcade font-bold text-gold-bright text-center">Change Status:</h4>
-               <div className="grid grid-cols-3 gap-3">
-                 {(['available', 'reserved', 'maintenance'] as TableStatus[]).map((status) => {
-                   // Only disable if the table has an active session and we're trying to change from occupied
-                   const hasActiveSession = selectedTable.currentSessionId && selectedTable.status === 'occupied';
-                   const isValidChange = !hasActiveSession || status === 'occupied';
-                   
-                   return (
-                     <button
-                       key={status}
-                       onClick={() => handleStatusChange(selectedTable.id, status)}
-                       disabled={!isValidChange}
-                       className={`px-4 py-3 rounded-xl text-sm font-arcade font-bold transition-all duration-300 transform hover:scale-105 ${
-                         !isValidChange ? 'bg-gray-400 text-gray-200 cursor-not-allowed' :
-                         status === 'available' ? 'bg-success-500 hover:bg-success-600 text-white border-2 border-success-400 shadow-lg' :
-                         status === 'reserved' ? 'bg-warning-500 hover:bg-warning-600 text-white border-2 border-warning-400 shadow-lg' :
-                         'bg-gray-500 hover:bg-gray-600 text-white border-2 border-gray-400 shadow-lg'
-                       }`}
-                       title={!isValidChange ? 'Cannot change status while session is active' : `Change to ${status}`}
-                     >
-                       {status === 'available' ? '🟢' : status === 'reserved' ? '🟡' : '⚫'} {status.charAt(0).toUpperCase() + status.slice(1)}
-                     </button>
-                   );
-                 })}
-               </div>
-               {selectedTable.status === 'occupied' && (
-                 <div className="text-center text-warning-400 font-arcade text-xs mt-2">
-                   ⚠️ End the session first to change table status
+                 
+                 <div className="p-4 bg-void-800/50 rounded-xl border border-neon-bright/20">
+                   <div className="flex items-center justify-between">
+                     <span className="font-arcade font-bold text-neon-bright">Capacity:</span>
+                     <span className="text-gold-bright font-arcade font-bold">{selectedTable.capacity} people</span>
+                   </div>
                  </div>
-               )}
+                 
+                 <div className="p-4 bg-void-800/50 rounded-xl border border-neon-bright/20">
+                   <div className="flex items-center justify-between">
+                     <span className="font-arcade font-bold text-neon-bright">Location:</span>
+                     <span className="text-gold-bright font-arcade font-bold">{selectedTable.location}</span>
+                   </div>
+                 </div>
+                 
+                 {selectedTable.customerName && (
+                   <div className="p-4 bg-danger-500/10 rounded-xl border border-danger-500/30">
+                     <div className="flex items-center justify-between">
+                       <span className="font-arcade font-bold text-danger-400">Customer:</span>
+                       <span className="text-danger-400 font-arcade font-bold">{selectedTable.customerName}</span>
+                     </div>
+                   </div>
+                 )}
+                 
+                 {selectedTable.startTime && (
+                   <div className="p-4 bg-warning-500/10 rounded-xl border border-warning-500/30">
+                     <div className="flex items-center justify-between">
+                       <span className="font-arcade font-bold text-warning-400">Start Time:</span>
+                       <span className="text-warning-400 font-arcade font-bold">
+                         {new Date(selectedTable.startTime).toLocaleTimeString()}
+                       </span>
+                     </div>
+                   </div>
+                 )}
+                 
+                 {selectedTable.notes && (
+                   <div className="p-4 bg-info-500/10 rounded-xl border border-info-500/30">
+                     <div className="flex items-center justify-between">
+                       <span className="font-arcade font-bold text-info-400">Notes:</span>
+                       <span className="text-info-400 font-arcade font-bold">{selectedTable.notes}</span>
+                     </div>
+                   </div>
+                 )}
+               </div>
+              
+                          {/* Status Change Options */}
+               <div className="mt-8 space-y-4">
+                 <h4 className="font-arcade font-bold text-gold-bright text-center">Change Status:</h4>
+                 <div className="grid grid-cols-3 gap-3">
+                   {(['available', 'reserved', 'maintenance'] as TableStatus[]).map((status) => {
+                     // Only disable if the table has an active session and we're trying to change from occupied
+                     const hasActiveSession = selectedTable.currentSessionId && selectedTable.status === 'occupied';
+                     const isValidChange = !hasActiveSession || status === 'occupied';
+                     
+                     return (
+                       <button
+                         key={status}
+                         onClick={() => handleStatusChange(selectedTable.id, status)}
+                         disabled={!isValidChange}
+                         className={`px-4 py-3 rounded-xl text-sm font-arcade font-bold transition-all duration-300 transform hover:scale-105 ${
+                           !isValidChange ? 'bg-gray-400 text-gray-200 cursor-not-allowed' :
+                           status === 'available' ? 'bg-success-500 hover:bg-success-600 text-white border-2 border-success-400 shadow-lg' :
+                           status === 'reserved' ? 'bg-warning-500 hover:bg-warning-600 text-white border-2 border-warning-400 shadow-lg' :
+                           'bg-gray-500 hover:bg-gray-600 text-white border-2 border-gray-400 shadow-lg'
+                         }`}
+                         title={!isValidChange ? 'Cannot change status while session is active' : `Change to ${status}`}
+                       >
+                         {status === 'available' ? '🟢' : status === 'reserved' ? '🟡' : '⚫'} {status.charAt(0).toUpperCase() + status.slice(1)}
+                       </button>
+                     );
+                   })}
+                 </div>
+                 {selectedTable.status === 'occupied' && (
+                   <div className="text-center text-warning-400 font-arcade text-xs mt-2">
+                     ⚠️ End the session first to change table status
+                   </div>
+                 )}
+               </div>
              </div>
-          </div>
-        </div>
-      )}
+           </div>
+         </ModalPortal>
+       )}
     </div>
   );
 };

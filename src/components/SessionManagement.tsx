@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ModalPortal from './ModalPortal';
 import { format, formatDistanceToNow } from 'date-fns';
 import SessionTimer from './SessionTimer';
 import { User, Customer, Session, Table } from '../types';
@@ -334,8 +335,9 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
 
       {/* Add Session Modal */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-void-1000/90 backdrop-blur-sm flex items-center justify-center p-6 z-50">
-          <div className="bg-void-900/95 backdrop-blur-md rounded-3xl shadow-2xl border-2 border-neon-bright p-8 w-full max-w-md animate-fade-in">
+        <ModalPortal>
+          <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999]">
+            <div className="bg-[#0D0D1A] p-6 rounded-2xl shadow-lg w-full max-w-md mx-4 animate-fade-in border-2 border-neon-bright">
             {/* Modal Header */}
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center space-x-3">
@@ -522,14 +524,16 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                 </button>
               </div>
             </form>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* Edit Session Modal */}
       {editingSession && (
-        <div className="fixed inset-0 bg-void-1000/90 backdrop-blur-sm flex items-center justify-center p-6 z-50">
-          <div className="bg-void-900/95 backdrop-blur-md rounded-3xl shadow-2xl border-2 border-gold-bright p-8 w-full max-w-md animate-fade-in">
+        <ModalPortal>
+          <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999]">
+            <div className="bg-[#0D0D1A] p-6 rounded-2xl shadow-lg w-full max-w-md mx-4 animate-fade-in border-2 border-gold-bright">
             {/* Modal Header */}
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center space-x-3">
@@ -706,8 +710,9 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                 </button>
               </div>
             </form>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* Active Sessions */}

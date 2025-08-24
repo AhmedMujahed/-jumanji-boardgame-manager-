@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ModalPortal from './ModalPortal';
 import { format } from 'date-fns';
 import { User, Customer } from '../types';
 
@@ -30,7 +31,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.name.trim()) {
+    if (formData.name.trim() && formData.phone.trim()) {
       if (editingId && onUpdateCustomer) {
         onUpdateCustomer(editingId, {
           name: formData.name.trim(),
@@ -101,8 +102,9 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
 
       {/* Add Customer Modal */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-void-1000/90 backdrop-blur-sm flex items-center justify-center p-6 z-50">
-          <div className="bg-void-900/95 backdrop-blur-md rounded-3xl shadow-2xl border-2 border-neon-bright p-8 w-full max-w-md animate-fade-in">
+        <ModalPortal>
+          <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999]">
+            <div className="bg-[#0D0D1A] p-6 rounded-2xl shadow-lg w-full max-w-md mx-4 animate-fade-in border-2 border-neon-bright">
             {/* Modal Header */}
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center space-x-3">
@@ -138,7 +140,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
               
               <div>
                 <label htmlFor="phone" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                  Phone Number
+                  Phone Number *
                 </label>
                 <input
                   type="tel"
@@ -147,6 +149,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
                   value={formData.phone}
                   onChange={handleInputChange}
                   placeholder="Enter phone number"
+                  required
                   className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white placeholder-neon-bright/60 transition-all duration-300 font-arcade"
                 />
               </div>
@@ -197,8 +200,9 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
                 </button>
               </div>
             </form>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* Customer List */}
