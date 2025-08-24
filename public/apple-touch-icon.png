@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jumanji Apple Touch Icon</title>
+    <style>
+        body { margin: 0; padding: 0; background: #000; }
+        .favicon { width: 180px; height: 180px; }
+    </style>
+</head>
+<body>
+    <svg class="favicon" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+        <rect width="512" height="512" fill="#000000"/>
+        <g transform="translate(256,256)">
+            <circle cx="0" cy="-20" r="180" fill="#8FBC8F" stroke="#2F4F2F" stroke-width="8"/>
+            <path d="M -120 -140 Q -60 -150 0 -140 Q 60 -150 120 -140" stroke="#6B9A6B" stroke-width="4" fill="none"/>
+            <path d="M -100 -120 Q -50 -130 0 -120 Q 50 -130 100 -120" stroke="#6B9A6B" stroke-width="3" fill="none"/>
+            <ellipse cx="-60" cy="-80" rx="25" ry="15" fill="#2F4F2F"/>
+            <ellipse cx="60" cy="-80" rx="25" ry="15" fill="#2F4F2F"/>
+            <path d="M -80 -60 Q -60 -50 -40 -60" stroke="#6B9A6B" stroke-width="3" fill="none"/>
+            <path d="M 40 -60 Q 60 -50 80 -60" stroke="#6B9A6B" stroke-width="3" fill="none"/>
+            <path d="M -90 -110 Q -60 -120 -30 -110" stroke="#2F4F2F" stroke-width="6" fill="none"/>
+            <path d="M 30 -110 Q 60 -120 90 -110" stroke="#2F4F2F" stroke-width="6" fill="none"/>
+            <ellipse cx="0" cy="-30" rx="15" ry="25" fill="#7CAE7C"/>
+            <path d="M -10 -20 L -5 -10" stroke="#6B9A6B" stroke-width="2"/>
+            <path d="M 10 -20 L 5 -10" stroke="#6B9A6B" stroke-width="2"/>
+            <path d="M -40 10 Q -20 0 0 10 Q 20 0 40 10" stroke="#2F4F2F" stroke-width="8" fill="none"/>
+            <path d="M -50 40 Q 0 60 50 40" stroke="#2F4F2F" stroke-width="6" fill="none"/>
+            <path d="M -80 60 Q -60 80 -40 60" stroke="#6B9A6B" stroke-width="4" fill="none"/>
+            <path d="M 40 60 Q 60 80 80 60" stroke="#6B9A6B" stroke-width="4" fill="none"/>
+            <ellipse cx="-150" cy="-20" rx="30" ry="50" fill="#8FBC8F" stroke="#2F4F2F" stroke-width="6"/>
+            <ellipse cx="150" cy="-20" rx="30" ry="50" fill="#8FBC8F" stroke="#2F4F2F" stroke-width="6"/>
+            <path d="M -120 140 L -60 200 L 60 200 L 120 140" fill="#4F7F4F" stroke="#2F4F2F" stroke-width="6"/>
+            <polygon points="0,140 -20,180 -10,220 10,220 20,180" fill="#2F4F2F"/>
+        </g>
+    </svg>
+</body>
+</html>

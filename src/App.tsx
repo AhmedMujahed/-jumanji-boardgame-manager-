@@ -160,6 +160,8 @@ const App: React.FC = () => {
       createdAt: new Date().toISOString()
     };
     setCustomers(prev => [...prev, newCustomer]);
+    // Broadcast customer add
+    notifyAll('customer:update', { action: 'add', customer: newCustomer });
     addLog('customer_add', 'Customer Added', `Added customer: ${customerData.name} (${customerData.email})`);
   };
 
@@ -189,8 +191,8 @@ const App: React.FC = () => {
       hours: 0
     };
     setSessions(prev => [...prev, newSession]);
-    // Broadcast to all clients
-    notifyAll('session:update', { id: newSession.id, status: 'active' });
+    // Broadcast to all clients with full payload
+    notifyAll('session:update', { action: 'add', session: newSession });
     
     // Update table status to occupied
     if (sessionData.tableId) {
@@ -217,6 +219,8 @@ const App: React.FC = () => {
       const customer = customers.find(c => c.id === session?.customerId);
       addLog('session_edit', 'Session Updated', `Updated session status to ${updates.status} for customer: ${customer?.name || 'Unknown'}`);
     }
+    // Broadcast updates
+    notifyAll('session:update', { action: 'update', sessionId, updates });
   };
 
   const endSession = (sessionId: string) => {
@@ -262,7 +266,7 @@ const App: React.FC = () => {
     const customer = customers.find(c => c.id === session?.customerId);
     addLog('session_end', 'Session Ended', `Ended session for customer: ${customer?.name || 'Unknown'} - ${session?.capacity || 0} people - Duration: ${session?.hours || 0}h, Cost: ${session?.totalCost || 0} SAR`);
     // Broadcast completion
-    notifyAll('session:update', { id: sessionId, status: 'completed' });
+    notifyAll('session:update', { action: 'end', sessionId });
   };
 
   // New handlers for the 4 features
@@ -273,6 +277,8 @@ const App: React.FC = () => {
       createdAt: new Date().toISOString()
     };
     setGames(prev => [...prev, newGame]);
+    // Broadcast game add
+    notifyAll('game:update', { action: 'add', game: newGame });
     addLog('game_add', 'Game Added', `Added game: ${gameData.name} (${gameData.category})`);
   };
 
@@ -283,11 +289,15 @@ const App: React.FC = () => {
     
     const game = games.find(g => g.id === gameId);
     addLog('game_edit', 'Game Updated', `Updated game: ${game?.name || 'Unknown'} - ${Object.keys(updates).join(', ')}`);
+    // Broadcast game update
+    notifyAll('game:update', { action: 'update', gameId, updates });
   };
 
   const deleteGame = (gameId: string) => {
     const game = games.find(g => g.id === gameId);
     setGames(prev => prev.filter(game => game.id !== gameId));
+    // Broadcast game delete
+    notifyAll('game:update', { action: 'delete', gameId });
     addLog('game_delete', 'Game Deleted', `Deleted game: ${game?.name || 'Unknown'}`);
   };
 
@@ -297,6 +307,8 @@ const App: React.FC = () => {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     };
     setPayments(prev => [...prev, newPayment]);
+    // Broadcast payment add
+    notifyAll('payment:update', { action: 'add', payment: newPayment });
     
     const session = sessions.find(s => s.id === paymentData.sessionId);
     const customer = customers.find(c => c.id === session?.customerId);
@@ -316,11 +328,15 @@ const App: React.FC = () => {
     
     const payment = payments.find(p => p.id === paymentId);
     addLog('payment_edit', 'Payment Updated', `Updated payment: ${payment?.amount || 0} SAR - ${Object.keys(updates).join(', ')}`);
+    // Broadcast payment update
+    notifyAll('payment:update', { action: 'update', paymentId, updates });
   };
 
   const deletePayment = (paymentId: string) => {
     const payment = payments.find(p => p.id === paymentId);
     setPayments(prev => prev.filter(payment => payment.id !== paymentId));
+    // Broadcast payment delete
+    notifyAll('payment:update', { action: 'delete', paymentId });
     addLog('payment_delete', 'Payment Deleted', `Deleted payment: ${payment?.amount || 0} SAR`);
   };
 
@@ -332,6 +348,8 @@ const App: React.FC = () => {
       lastUpdated: new Date().toISOString()
     };
     setTables(prev => [...prev, newTable]);
+    // Broadcast table add
+    notifyAll('table:update', { action: 'add', table: newTable });
     addLog('table_add', 'Table Added', `Added table: ${tableData.tableNumber} (${tableData.tableNumber}) - Capacity: ${tableData.capacity}`);
   };
 
@@ -347,6 +365,8 @@ const App: React.FC = () => {
       // Find the updated table for logging
       const updatedTable = updatedTables.find(t => t.id === tableId);
       addLog('table_edit', 'Table Updated', `Updated table: ${updatedTable?.tableNumber || 'Unknown'} - ${Object.keys(updates).join(', ')}`);
+      // Broadcast table update
+      notifyAll('table:update', { action: 'update', tableId, updates });
       
       return updatedTables;
     });
@@ -391,6 +411,8 @@ const App: React.FC = () => {
   const deleteTable = (tableId: string) => {
     const table = tables.find(t => t.id === tableId);
     setTables(prev => prev.filter(table => table.id !== tableId));
+    // Broadcast table delete
+    notifyAll('table:update', { action: 'delete', tableId });
     addLog('table_delete', 'Table Deleted', `Deleted table: ${table?.tableNumber || 'Unknown'}`);
   };
 
@@ -401,6 +423,8 @@ const App: React.FC = () => {
       createdAt: new Date().toISOString()
     };
     setReservations(prev => [...prev, newReservation]);
+    // Broadcast reservation add
+    notifyAll('reservation:update', { action: 'add', reservation: newReservation });
     
     const table = tables.find(t => t.id === reservationData.tableId);
     const customer = customers.find(c => c.id === reservationData.customerId);
@@ -414,11 +438,15 @@ const App: React.FC = () => {
     
     const reservation = reservations.find(r => r.id === reservationId);
     addLog('reservation_edit', 'Reservation Updated', `Updated reservation: ${Object.keys(updates).join(', ')}`);
+    // Broadcast reservation update
+    notifyAll('reservation:update', { action: 'update', reservationId, updates });
   };
 
   const deleteReservation = (reservationId: string) => {
     const reservation = reservations.find(r => r.id === reservationId);
     setReservations(prev => prev.filter(reservation => reservation.id !== reservationId));
+    // Broadcast reservation delete
+    notifyAll('reservation:update', { action: 'delete', reservationId });
     addLog('reservation_delete', 'Reservation Deleted', `Deleted reservation for customer: ${customers.find(c => c.id === reservation?.customerId)?.name || 'Unknown'}`);
   };
 
@@ -452,8 +480,57 @@ const App: React.FC = () => {
 
     initRealtime((evt) => {
       if (evt.type === 'analytics:update' && role !== 'owner') return;
-      // For session updates we could refetch or patch local state.
-      // Minimal: no-op; hooks exist for future integration.
+      if (evt.type === 'session:update') {
+        const payload: any = evt.payload || {};
+        if (payload.action === 'add' && payload.session) {
+          setSessions(prev => prev.some(s => s.id === payload.session.id) ? prev : [payload.session, ...prev]);
+        } else if (payload.action === 'update' && payload.sessionId) {
+          setSessions(prev => prev.map(s => s.id === payload.sessionId ? { ...s, ...(payload.updates || {}) } : s));
+        } else if (payload.action === 'end' && payload.sessionId) {
+          setSessions(prev => prev.map(s => s.id === payload.sessionId ? { ...s, status: 'completed' } : s));
+        }
+      } else if (evt.type === 'customer:update') {
+        const p: any = evt.payload || {};
+        if (p.action === 'add' && p.customer) {
+          setCustomers(prev => prev.some(c => c.id === p.customer.id) ? prev : [...prev, p.customer]);
+        }
+      } else if (evt.type === 'game:update') {
+        const p: any = evt.payload || {};
+        if (p.action === 'add' && p.game) {
+          setGames(prev => prev.some(g => g.id === p.game.id) ? prev : [...prev, p.game]);
+        } else if (p.action === 'update' && p.gameId) {
+          setGames(prev => prev.map(g => g.id === p.gameId ? { ...g, ...(p.updates || {}) } : g));
+        } else if (p.action === 'delete' && p.gameId) {
+          setGames(prev => prev.filter(g => g.id !== p.gameId));
+        }
+      } else if (evt.type === 'payment:update') {
+        const p: any = evt.payload || {};
+        if (p.action === 'add' && p.payment) {
+          setPayments(prev => prev.some(pm => pm.id === p.payment.id) ? prev : [...prev, p.payment]);
+        } else if (p.action === 'update' && p.paymentId) {
+          setPayments(prev => prev.map(pm => pm.id === p.paymentId ? { ...pm, ...(p.updates || {}) } : pm));
+        } else if (p.action === 'delete' && p.paymentId) {
+          setPayments(prev => prev.filter(pm => pm.id !== p.paymentId));
+        }
+      } else if (evt.type === 'table:update') {
+        const p: any = evt.payload || {};
+        if (p.action === 'add' && p.table) {
+          setTables(prev => prev.some(t => t.id === p.table.id) ? prev : [...prev, p.table]);
+        } else if (p.action === 'update' && p.tableId) {
+          setTables(prev => prev.map(t => t.id === p.tableId ? { ...t, ...(p.updates || {}) } : t));
+        } else if (p.action === 'delete' && p.tableId) {
+          setTables(prev => prev.filter(t => t.id !== p.tableId));
+        }
+      } else if (evt.type === 'reservation:update') {
+        const p: any = evt.payload || {};
+        if (p.action === 'add' && p.reservation) {
+          setReservations(prev => prev.some(r => r.id === p.reservation.id) ? prev : [...prev, p.reservation]);
+        } else if (p.action === 'update' && p.reservationId) {
+          setReservations(prev => prev.map(r => r.id === p.reservationId ? { ...r, ...(p.updates || {}) } : r));
+        } else if (p.action === 'delete' && p.reservationId) {
+          setReservations(prev => prev.filter(r => r.id !== p.reservationId));
+        }
+      }
     });
 
     startPresence(userId, role);
