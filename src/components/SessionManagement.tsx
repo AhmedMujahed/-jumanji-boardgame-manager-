@@ -68,6 +68,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     tableNumber: 0
   });
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showEndConfirmation, setShowEndConfirmation] = useState<string | null>(null);
 
   // Update current time every second for live cost calculation
   useEffect(() => {
@@ -78,10 +79,6 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Helper function to get default gender breakdown
-  const getDefaultGenderBreakdown = (session: Session) => {
-    return session.genderBreakdown || { male: 0, female: 0 };
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,9 +172,9 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     });
   };
 
-  // Get available tables for the current capacity
+  // Get available tables (no capacity restriction)
   const getAvailableTablesForCapacity = () => {
-    return tables.filter(table => table.status === 'available' && table.capacity >= formData.capacity);
+    return tables.filter(table => table.status === 'available'); // Show all available tables
   };
 
   const handleEditSession = (sessionId: string) => {
@@ -205,17 +202,19 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
       return;
     }
     
-         if (editingSession) {
-       onUpdateSession(editingSession, {
-         ...editFormData,
-         genderBreakdown: {
-           male: editFormData.male,
-           female: editFormData.female
-         }
-       });
-       setEditingSession(null);
-       setEditFormData({ notes: '', status: 'active', capacity: 1, male: 1, female: 0, tableId: '', tableNumber: 0 });
-     }
+    if (editingSession) {
+      onUpdateSession(editingSession, {
+        notes: editFormData.notes,
+        status: editFormData.status,
+        capacity: editFormData.capacity,
+        genderBreakdown: {
+          male: editFormData.male,
+          female: editFormData.female
+        }
+      });
+      setEditingSession(null);
+      setEditFormData({ notes: '', status: 'active', capacity: 1, male: 1, female: 0, tableId: '', tableNumber: 0 });
+    }
   };
 
   const handleDeleteSession = (sessionId: string) => {
@@ -227,6 +226,21 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
   const handleCancelEdit = () => {
     setEditingSession(null);
     setEditFormData({ notes: '', status: 'active', capacity: 1, male: 1, female: 0, tableId: '', tableNumber: 0 });
+  };
+
+  const handleEndSessionClick = (sessionId: string) => {
+    setShowEndConfirmation(sessionId);
+  };
+
+  const handleConfirmEndSession = () => {
+    if (showEndConfirmation) {
+      onEndSession(showEndConfirmation);
+      setShowEndConfirmation(null);
+    }
+  };
+
+  const handleCancelEndSession = () => {
+    setShowEndConfirmation(null);
   };
 
   const activeSessions = sessions.filter(s => s.status === 'active');
@@ -357,8 +371,8 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
       {/* Add Session Modal */}
       {showAddForm && (
         <ModalPortal>
-          <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999]">
-            <div className="bg-[#0D0D1A] p-6 rounded-2xl shadow-lg w-full max-w-md mx-4 animate-fade-in border-2 border-neon-bright">
+          <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999] p-4">
+            <div className="bg-[#0D0D1A] p-8 rounded-2xl shadow-lg w-full max-w-4xl mx-4 animate-fade-in border-2 border-neon-bright max-h-[95vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center space-x-3">
@@ -420,7 +434,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                    <option value="">Choose a table</option>
                    {getAvailableTablesForCapacity().map(table => (
                      <option key={table.id} value={table.id}>
-                       🏠 Table {table.tableNumber} - {table.type} ({table.capacity} people)
+                       🏠 Table {table.tableNumber} - {table.type}
                      </option>
                    ))}
                  </select>
@@ -445,88 +459,147 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                 </div>
               )}
 
-              {/* Capacity and Gender Section */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label htmlFor="capacity" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                    Total People *
-                  </label>
-                  <input
-                    type="number"
+              {/* Total People Section */}
+              <div className="bg-void-800/50 p-8 rounded-2xl border-2 border-neon-bright/30 mb-8">
+                <h3 className="text-2xl font-arcade font-bold text-gold-bright mb-6 text-center">🎯 Total People</h3>
+                <div className="max-w-md mx-auto">
+                  <select
                     id="capacity"
                     name="capacity"
                     value={formData.capacity}
                     onChange={handleInputChange}
-                    min="1"
-                    max="20"
                     required
-                    className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="male" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                    Male Count
-                  </label>
-                  <input
-                    type="number"
-                    id="male"
-                    name="male"
-                    value={formData.male}
-                    onChange={handleInputChange}
-                    min="0"
-                    max={formData.capacity}
-                    required
-                    className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="female" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                    Female Count
-                  </label>
-                  <input
-                    type="number"
-                    id="female"
-                    name="female"
-                    value={formData.female}
-                    onChange={handleInputChange}
-                    min="0"
-                    max={formData.capacity}
-                    required
-                    className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
-                  />
+                    className="w-full px-6 py-4 border-2 border-neon-bright rounded-2xl focus:ring-4 focus:ring-neon-glow focus:border-transparent bg-void-900 text-white font-arcade transition-all duration-300 text-center text-xl"
+                  >
+                    {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
+                      <option key={num} value={num}>
+                        {num} {num === 1 ? 'Person' : 'People'}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-                                                {/* Gender Summary */}
-                 <div className={`p-3 rounded-lg border ${
-                   formData.male + formData.female === formData.capacity 
-                     ? 'bg-void-700/30 border-neon-bright/20' 
-                     : 'bg-danger-500/20 border-danger-500/50'
-                 }`}>
-                   <div className="text-center">
-                     <div className={`font-arcade text-sm ${
-                       formData.male + formData.female === formData.capacity 
-                         ? 'text-neon-bright/80' 
-                         : 'text-danger-400'
-                     }`}>
-                       <strong>👥 Session Summary:</strong> {formData.capacity} people total
-                     </div>
-                     <div className={`text-xs mt-1 ${
-                       formData.male + formData.female === formData.capacity 
-                         ? 'text-neon-bright/60' 
-                         : 'text-danger-400/80'
-                     }`}>
-                       🚹 {formData.male} Male • 🚺 {formData.female} Female • 💰 First 30 min: {30 * formData.capacity} SAR
-                     </div>
-                     {formData.male + formData.female !== formData.capacity && (
-                       <div className="text-danger-400 font-arcade font-bold text-sm mt-2">
-                         ⚠️ Gender count must equal total people!
-                       </div>
-                     )}
-                   </div>
-                 </div>
+              {/* Gender Counter Section */}
+              <div className="bg-void-800/50 p-8 rounded-2xl border-2 border-neon-bright/30 mb-8">
+                <h3 className="text-2xl font-arcade font-bold text-gold-bright mb-8 text-center">👥 Gender Count</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                  {/* Male Counter */}
+                  <div className="bg-void-700/50 p-8 rounded-2xl border-2 border-blue-400/50">
+                    <div className="text-center mb-6">
+                      <h4 className="text-xl font-arcade font-bold text-blue-400 mb-2">🚹 Male</h4>
+                    </div>
+                    <div className="flex items-center justify-center space-x-6">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newMale = Math.max(0, formData.male - 1);
+                          const newFemale = Math.min(formData.capacity - newMale, formData.female);
+                          setFormData(prev => ({ ...prev, male: newMale, female: newFemale }));
+                        }}
+                        className="w-16 h-16 bg-red-600 hover:bg-red-500 text-white font-arcade font-bold text-2xl rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
+                      >
+                        −
+                      </button>
+                      <div className="w-24 h-24 bg-void-900 border-4 border-blue-400 rounded-2xl flex items-center justify-center shadow-lg">
+                        <span className="text-4xl font-arcade font-bold text-blue-400">{formData.male}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newMale = Math.min(formData.capacity, formData.male + 1);
+                          const newFemale = formData.capacity - newMale;
+                          setFormData(prev => ({ ...prev, male: newMale, female: newFemale }));
+                        }}
+                        className="w-16 h-16 bg-green-600 hover:bg-green-500 text-white font-arcade font-bold text-2xl rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Female Counter */}
+                  <div className="bg-void-700/50 p-8 rounded-2xl border-2 border-pink-400/50">
+                    <div className="text-center mb-6">
+                      <h4 className="text-xl font-arcade font-bold text-pink-400 mb-2">🚺 Female</h4>
+                    </div>
+                    <div className="flex items-center justify-center space-x-6">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newFemale = Math.max(0, formData.female - 1);
+                          const newMale = Math.min(formData.capacity - newFemale, formData.male);
+                          setFormData(prev => ({ ...prev, female: newFemale, male: newMale }));
+                        }}
+                        className="w-16 h-16 bg-red-600 hover:bg-red-500 text-white font-arcade font-bold text-2xl rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
+                      >
+                        −
+                      </button>
+                      <div className="w-24 h-24 bg-void-900 border-4 border-pink-400 rounded-2xl flex items-center justify-center shadow-lg">
+                        <span className="text-4xl font-arcade font-bold text-pink-400">{formData.female}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newFemale = Math.min(formData.capacity, formData.female + 1);
+                          const newMale = formData.capacity - newFemale;
+                          setFormData(prev => ({ ...prev, female: newFemale, male: newMale }));
+                        }}
+                        className="w-16 h-16 bg-green-600 hover:bg-green-500 text-white font-arcade font-bold text-2xl rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Session Summary */}
+              <div className={`p-8 rounded-2xl border-2 mb-8 ${
+                formData.male + formData.female === formData.capacity 
+                  ? 'bg-gradient-to-r from-green-900/30 to-blue-900/30 border-green-400/50' 
+                  : 'bg-gradient-to-r from-red-900/30 to-orange-900/30 border-red-400/50'
+              }`}>
+                <div className="text-center">
+                  <div className={`font-arcade text-2xl font-bold mb-8 ${
+                    formData.male + formData.female === formData.capacity 
+                      ? 'text-green-400' 
+                      : 'text-red-400'
+                  }`}>
+                    {formData.male + formData.female === formData.capacity ? '✅' : '⚠️'} Session Summary
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                    <div className="bg-void-900/50 p-6 rounded-2xl border-2 border-gold-bright/50 shadow-lg">
+                      <div className="text-gold-bright font-arcade font-bold text-lg mb-2">Total People</div>
+                      <div className="text-5xl font-arcade font-bold text-gold-bright">{formData.capacity}</div>
+                    </div>
+                    <div className="bg-void-900/50 p-6 rounded-2xl border-2 border-blue-400/50 shadow-lg">
+                      <div className="text-blue-400 font-arcade font-bold text-lg mb-2">🚹 Male</div>
+                      <div className="text-5xl font-arcade font-bold text-blue-400">{formData.male}</div>
+                    </div>
+                    <div className="bg-void-900/50 p-6 rounded-2xl border-2 border-pink-400/50 shadow-lg">
+                      <div className="text-pink-400 font-arcade font-bold text-lg mb-2">🚺 Female</div>
+                      <div className="text-5xl font-arcade font-bold text-pink-400">{formData.female}</div>
+                    </div>
+                  </div>
+
+                  <div className={`font-arcade text-xl p-4 rounded-xl border-2 ${
+                    formData.male + formData.female === formData.capacity 
+                      ? 'text-green-400 border-green-400/30 bg-green-900/20' 
+                      : 'text-red-400 border-red-400/30 bg-red-900/20'
+                  }`}>
+                    💰 First 30 min: <span className="font-bold text-2xl">{30 * formData.capacity} SAR</span>
+                  </div>
+                  
+                  {formData.male + formData.female !== formData.capacity && (
+                    <div className="text-red-400 font-arcade font-bold text-lg mt-6 bg-red-900/30 p-4 rounded-xl border-2 border-red-400/50">
+                      ⚠️ Gender count must equal total people!
+                    </div>
+                  )}
+                </div>
+              </div>
               
               <div>
                 <label htmlFor="notes" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
@@ -608,94 +681,13 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                  >
                    {tables.map(table => (
                      <option key={table.id} value={table.id}>
-                       🏠 Table {table.tableNumber} - {table.type} ({table.capacity} people)
+                       🏠 Table {table.tableNumber} - {table.type}
                      </option>
                    ))}
                  </select>
               </div>
 
               {/* Capacity and Gender Section */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label htmlFor="editCapacity" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                    Total People *
-                  </label>
-                                     <input
-                     type="number"
-                     id="editCapacity"
-                     name="capacity"
-                     value={editFormData.capacity}
-                     onChange={(e) => setEditFormData(prev => ({ ...prev, capacity: Number(e.target.value) || 1 }))}
-                     min="1"
-                     max="20"
-                     required
-                     className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
-                   />
-                </div>
-                
-                <div>
-                  <label htmlFor="editMale" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                    Male Count
-                  </label>
-                                     <input
-                     type="number"
-                     id="editMale"
-                     name="male"
-                     value={editFormData.male}
-                     onChange={(e) => setEditFormData(prev => ({ ...prev, male: Number(e.target.value) || 0 }))}
-                     min="0"
-                     max={editFormData.capacity}
-                     required
-                     className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
-                   />
-                </div>
-                
-                <div>
-                  <label htmlFor="editFemale" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                    Female Count
-                  </label>
-                                     <input
-                     type="number"
-                     id="editFemale"
-                     name="female"
-                     value={editFormData.female}
-                     onChange={(e) => setEditFormData(prev => ({ ...prev, female: Number(e.target.value) || 0 }))}
-                     min="0"
-                     max={editFormData.capacity}
-                     required
-                     className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
-                   />
-                </div>
-              </div>
-
-              {/* Gender Summary */}
-              <div className={`p-3 rounded-lg border ${
-                editFormData.male + editFormData.female === editFormData.capacity 
-                  ? 'bg-void-700/30 border-gold-bright/20' 
-                  : 'bg-danger-500/20 border-danger-500/50'
-              }`}>
-                <div className="text-center">
-                  <div className={`font-arcade text-sm ${
-                    editFormData.male + editFormData.female === editFormData.capacity 
-                      ? 'text-gold-bright/80' 
-                      : 'text-danger-400'
-                  }`}>
-                    <strong>👥 Session Summary:</strong> {editFormData.capacity} people total
-                  </div>
-                  <div className={`text-xs mt-1 ${
-                    editFormData.male + editFormData.female === editFormData.capacity 
-                      ? 'text-gold-bright/60' 
-                      : 'text-danger-400/80'
-                  }`}>
-                                         🚹 {editFormData.male} Male • 🚺 {editFormData.female} Female • 💰 First 30 min: {30 * editFormData.capacity} SAR
-                  </div>
-                  {editFormData.male + editFormData.female !== editFormData.capacity && (
-                    <div className="text-danger-400 font-arcade font-bold text-sm mt-2">
-                      ⚠️ Gender count must equal total people!
-                    </div>
-                  )}
-                </div>
-              </div>
 
               <div>
                 <label htmlFor="editNotes" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
@@ -879,7 +871,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
 
                   {/* End Session Button */}
                   <button 
-                    onClick={() => onEndSession(session.id)}
+                    onClick={() => handleEndSessionClick(session.id)}
                     className="w-full px-4 py-3 bg-danger-600 hover:bg-danger-700 text-white font-arcade font-black rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border-2 border-danger-600 hover:border-danger-500 flex items-center justify-center space-x-2"
                   >
                     <span>⏹️</span>
@@ -1001,6 +993,77 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
             </button>
           </div>
         </div>
+      )}
+
+      {/* End Session Confirmation Modal */}
+      {showEndConfirmation && (
+        <ModalPortal>
+          <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-[9999] p-4">
+            <div className="bg-[#0D0D1A] p-8 rounded-2xl shadow-2xl w-full max-w-lg mx-4 animate-fade-in border-2 border-red-500/50">
+              {/* Modal Header */}
+              <div className="text-center mb-8">
+                <div className="text-6xl mb-4">⚠️</div>
+                <h3 className="text-2xl font-arcade font-bold text-red-400 mb-2">
+                  End Session?
+                </h3>
+                <p className="text-neon-bright/80 font-arcade text-lg">
+                  Are you sure you want to end this session?
+                </p>
+              </div>
+
+              {/* Session Info */}
+              {(() => {
+                const session = sessions.find(s => s.id === showEndConfirmation);
+                const customer = customers.find(c => c.id === session?.customerId);
+                if (!session) return null;
+
+                return (
+                  <div className="bg-void-800/50 p-6 rounded-xl border border-red-400/30 mb-8">
+                    <div className="text-center">
+                      <div className="text-gold-bright font-arcade font-bold text-lg mb-2">
+                        {customer?.name || 'Unknown Customer'}
+                      </div>
+                      <div className="text-neon-bright/80 font-arcade text-sm mb-2">
+                        👥 {session.capacity} people • 🏠 Table {session.tableNumber}
+                      </div>
+                      <div className="text-neon-bright/80 font-arcade text-sm">
+                        🕐 Started: {new Date(session.startTime).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Warning Message */}
+              <div className="bg-red-900/30 p-4 rounded-xl border border-red-400/50 mb-8">
+                <div className="text-center">
+                  <div className="text-red-400 font-arcade font-bold text-sm mb-2">
+                    ⚠️ This action cannot be undone!
+                  </div>
+                  <div className="text-red-400/80 font-arcade text-xs">
+                    The session will be marked as completed and billing will be finalized.
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-4">
+                <button 
+                  onClick={handleCancelEndSession}
+                  className="flex-1 px-6 py-3 bg-void-700 hover:bg-void-600 text-neon-bright font-arcade font-bold rounded-xl transition-all duration-300 border-2 border-neon-bright/30"
+                >
+                  ❌ Cancel
+                </button>
+                <button 
+                  onClick={handleConfirmEndSession}
+                  className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-arcade font-bold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border-2 border-red-500"
+                >
+                  ⏹️ End Session
+                </button>
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
       )}
     </div>
   );

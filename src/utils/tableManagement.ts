@@ -5,17 +5,14 @@ const generateTableId = (tableNumber: number): string => {
   return `table_${tableNumber.toString().padStart(2, '0')}`;
 };
 
-// Initialize 50 tables with default data
+// Initialize 15 tables with default data
 export const initializeTables = (): Table[] => {
   const tables: Table[] = [];
   const now = new Date().toISOString();
   
-  for (let i = 1; i <= 50; i++) {
+  for (let i = 1; i <= 15; i++) {
     // All tables are standard type
     const type: 'standard' | 'premium' | 'vip' = 'standard';
-    
-    // All tables have 4 people capacity
-    const capacity = 4;
     
     // All tables are in Main Hall
     const location = 'Main Hall';
@@ -24,7 +21,7 @@ export const initializeTables = (): Table[] => {
       id: generateTableId(i),
       tableNumber: i,
       status: 'available',
-      capacity,
+      capacity: 999, // No capacity limit - accept any number
       type,
       features: ['Standard Service'],
       location,
@@ -43,7 +40,7 @@ export const initializeTables = (): Table[] => {
 export const getAllTables = (): Table[] => {
   const tablesData = localStorage.getItem('tables');
   if (!tablesData) {
-    console.log('No tables found in localStorage, initializing 50 tables...');
+    console.log('No tables found in localStorage, initializing 15 tables...');
     const initialTables = initializeTables();
     localStorage.setItem('tables', JSON.stringify(initialTables));
     console.log('Tables initialized:', initialTables.length);
@@ -53,8 +50,8 @@ export const getAllTables = (): Table[] => {
   const parsedTables = JSON.parse(tablesData);
   console.log('Found tables in localStorage:', parsedTables.length);
   
-  // If we don't have exactly 50 tables, reinitialize
-  if (parsedTables.length !== 50) {
+  // If we don't have exactly 15 tables, reinitialize
+  if (parsedTables.length !== 15) {
     console.log('Table count mismatch, reinitializing...');
     const initialTables = initializeTables();
     localStorage.setItem('tables', JSON.stringify(initialTables));
@@ -156,19 +153,9 @@ export const isTableAvailableForSession = (tableId: string, requiredCapacity: nu
   const table = getTableById(tableId);
   if (!table) return false;
   
-  return table.status === 'available' && table.capacity >= requiredCapacity;
+  return table.status === 'available'; // Accept any capacity
 };
 
-// Get tables by capacity range
-export const getTablesByCapacity = (minCapacity: number, maxCapacity?: number): Table[] => {
-  const tables = getAllTables();
-  return tables.filter(table => {
-    if (maxCapacity) {
-      return table.capacity >= minCapacity && table.capacity <= maxCapacity;
-    }
-    return table.capacity >= minCapacity;
-  });
-};
 
 // Reset all tables to available (useful for testing)
 export const resetAllTables = (): void => {
@@ -199,9 +186,6 @@ export const validateTableAssignment = (tableId: string, requiredCapacity: numbe
     return { isValid: false, error: 'Table is already occupied by another session' };
   }
   
-  if (table.capacity < requiredCapacity) {
-    return { isValid: false, error: `Table capacity (${table.capacity}) is insufficient for ${requiredCapacity} people` };
-  }
   
   return { isValid: true };
 };
@@ -245,8 +229,8 @@ export const checkTableConflicts = (tableId: string, sessionId: string): {
 };
 
 // Get optimal table for a group
-export const getOptimalTable = (requiredCapacity: number, preferredType?: 'standard' | 'premium' | 'vip'): Table | null => {
-  const availableTables = getAvailableTables().filter(table => table.capacity >= requiredCapacity);
+export const getOptimalTable = (preferredType?: 'standard' | 'premium' | 'vip'): Table | null => {
+  const availableTables = getAvailableTables();
   
   if (availableTables.length === 0) return null;
   
@@ -254,17 +238,13 @@ export const getOptimalTable = (requiredCapacity: number, preferredType?: 'stand
   if (preferredType) {
     const preferredTables = availableTables.filter(table => table.type === preferredType);
     if (preferredTables.length > 0) {
-      // Return the table with the closest capacity match
-      return preferredTables.reduce((best, current) => 
-        Math.abs(current.capacity - requiredCapacity) < Math.abs(best.capacity - requiredCapacity) ? current : best
-      );
+      // Return the first available table of preferred type
+      return preferredTables[0];
     }
   }
   
-  // Return the table with the closest capacity match
-  return availableTables.reduce((best, current) => 
-    Math.abs(current.capacity - requiredCapacity) < Math.abs(best.capacity - requiredCapacity) ? current : best
-  );
+  // Return the first available table
+  return availableTables[0];
 };
 
 // Schedule table maintenance

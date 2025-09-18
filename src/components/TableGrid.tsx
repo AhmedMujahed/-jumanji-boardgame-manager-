@@ -175,10 +175,10 @@ const TableGrid: React.FC<TableGridProps> = ({
                   }}
                   className="px-6 py-3 bg-neon-bright hover:bg-neon-glow text-void-1000 font-arcade font-black rounded-xl transition-all duration-300 transform hover:scale-105 shadow-neon hover:shadow-neon-lg border-2 border-neon-bright"
                 >
-                  🚀 Initialize 50 Tables
+                  🚀 Initialize 15 Tables
                 </button>
                 <p className="text-neon-bright/60 font-arcade text-sm mt-2">
-                  Click to create all 50 tables with default settings
+                  Click to create all 15 tables with default settings
                 </p>
               </div>
             )}
@@ -256,10 +256,6 @@ const TableGrid: React.FC<TableGridProps> = ({
                     {statusStyle.icon}
                   </div>
                   
-                  {/* Capacity */}
-                  <div className="text-xs text-white font-medium">
-                    {table.capacity} people
-                  </div>
                   
                   {/* Type Badge - Moved to bottom right to avoid covering table number */}
                   <div className={`
@@ -335,12 +331,6 @@ const TableGrid: React.FC<TableGridProps> = ({
                    </div>
                  </div>
                  
-                 <div className="p-4 bg-void-800/50 rounded-xl border border-neon-bright/20">
-                   <div className="flex items-center justify-between">
-                     <span className="font-arcade font-bold text-neon-bright">Capacity:</span>
-                     <span className="text-gold-bright font-arcade font-bold">{selectedTable.capacity} people</span>
-                   </div>
-                 </div>
                  
                  <div className="p-4 bg-void-800/50 rounded-xl border border-neon-bright/20">
                    <div className="flex items-center justify-between">

@@ -4,36 +4,32 @@ import { getAvailableTables, validateTableAssignment, checkTableConflicts } from
 
 interface TableSelectorProps {
   selectedTableId: string;
-  requiredCapacity: number;
   onTableSelect: (tableId: string, tableNumber: number) => void;
 }
 
 const TableSelector: React.FC<TableSelectorProps> = ({
   selectedTableId,
-  requiredCapacity,
   onTableSelect
 }) => {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [availableTables, setAvailableTables] = useState<Table[]>([]);
   
-  // Update available tables when capacity changes
+  // Update available tables
   useEffect(() => {
-    const tables = getAvailableTables().filter(
-      table => table.capacity >= requiredCapacity
-    );
+    const tables = getAvailableTables();
     setAvailableTables(tables);
     
-    // Clear validation error when capacity changes
+    // Clear validation error
     setValidationError(null);
-  }, [requiredCapacity]);
+  }, []);
   
   // Validate table selection
   const handleTableSelection = (tableId: string, tableNumber: number) => {
     // Clear previous validation errors
     setValidationError(null);
     
-    // Validate the table assignment
-    const validation = validateTableAssignment(tableId, requiredCapacity);
+    // Validate the table assignment (no capacity check needed)
+    const validation = validateTableAssignment(tableId, 1);
     if (!validation.isValid) {
       setValidationError(validation.error || 'Invalid table selection');
       return;
@@ -69,10 +65,10 @@ const TableSelector: React.FC<TableSelectorProps> = ({
         <div className="text-center">
           <div className="text-4xl mb-2">⚠️</div>
           <p className="text-danger-400 font-arcade font-bold text-sm">
-            No available tables for {requiredCapacity} people
+            No available tables
           </p>
           <p className="text-danger-400/70 font-arcade text-xs mt-1">
-            Please try a smaller group or wait for tables to become available
+            Please wait for tables to become available
           </p>
         </div>
       </div>
@@ -86,7 +82,7 @@ const TableSelector: React.FC<TableSelectorProps> = ({
           🏠 Select Table
         </label>
         <p className="text-neon-bright/70 font-arcade text-sm">
-          Required capacity: {requiredCapacity} people • {availableTables.length} tables available
+          {availableTables.length} tables available
         </p>
       </div>
       
@@ -111,10 +107,6 @@ const TableSelector: React.FC<TableSelectorProps> = ({
               </span>
             </div>
             <div className="text-neon-bright/80 font-arcade text-sm space-y-1">
-              <div className="flex items-center space-x-2">
-                <span>👥</span>
-                <span>Capacity: {table.capacity} people</span>
-              </div>
               <div className="flex items-center space-x-2">
                 <span>📍</span>
                 <span>{table.location}</span>

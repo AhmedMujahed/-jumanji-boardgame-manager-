@@ -47,8 +47,8 @@ const App: React.FC = () => {
     const savedTables = localStorage.getItem('tables');
     if (savedTables) {
       const parsedTables = JSON.parse(savedTables);
-      // Ensure we have exactly 50 tables
-      if (parsedTables.length === 50) {
+      // Ensure we have exactly 15 tables
+      if (parsedTables.length === 15) {
         return parsedTables;
       }
     }
@@ -417,7 +417,7 @@ const App: React.FC = () => {
     setTables(prev => [...prev, newTable]);
     // Broadcast table add
     notifyAll('table:update', { action: 'add', table: newTable });
-    addLog('table_add', 'Table Added', `Added table: ${tableData.tableNumber} (${tableData.tableNumber}) - Capacity: ${tableData.capacity}`);
+    addLog('table_add', 'Table Added', `Added table: ${tableData.tableNumber} (${tableData.tableNumber})`);
   };
 
   const updateTable = (tableId: string, updates: Partial<Table>) => {
@@ -444,7 +444,7 @@ const App: React.FC = () => {
     updateTable(tableId, { status: newStatus });
   };
 
-  // Force refresh tables (reinitialize all 50 tables)
+  // Force refresh tables (reinitialize all 15 tables)
   const handleRefreshTables = () => {
     // Force clear localStorage and reinitialize all tables
     localStorage.removeItem('tables');
@@ -466,7 +466,7 @@ const App: React.FC = () => {
         userName: user.username,
         userRole: user.role,
         action: 'Tables Refreshed',
-        details: 'All 50 tables have been reinitialized',
+        details: 'All 15 tables have been reinitialized',
         timestamp: new Date().toISOString(),
         ipAddress: '127.0.0.1',
         userAgent: navigator.userAgent

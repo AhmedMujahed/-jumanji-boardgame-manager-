@@ -34,7 +34,7 @@ export interface Session {
     female: number;
   };
   tableId: string; // Table ID (not just number)
-  tableNumber: number; // Table number (1-50) for display
+  tableNumber: number; // Table number (1-15) for display
   createdAt: string;
 }
 
@@ -156,17 +156,11 @@ export interface Payment {
 }
 
 // New interface for session capacity and gender
-export interface SessionCapacity {
-  total: number;
-  male: number;
-  female: number;
-  genderType: 'male' | 'female' | 'mixed';
-}
 
 // New interfaces for Table Management
 export interface Table {
   id: string;
-  tableNumber: number; // 1-50
+  tableNumber: number; // 1-15
   status: 'available' | 'occupied' | 'reserved' | 'maintenance';
   capacity: number; // Maximum number of people
   currentSessionId?: string; // ID of active session if occupied
