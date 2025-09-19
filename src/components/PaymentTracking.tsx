@@ -40,19 +40,27 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({
   });
 
   const getCustomerName = (sessionId: string) => {
-    const session = sessions.find(s => s.id === sessionId);
-    if (!session) return 'Unknown Session';
-    const customer = customers.find(c => c.id === session.customerId);
-    return customer ? customer.name : 'Unknown Customer';
+    try {
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) return 'Unknown Session';
+      const customer = customers.find(c => c.id === session.customerId);
+      return customer ? customer.name : 'Unknown Customer';
+    } catch (error) {
+      return 'Error Loading Customer';
+    }
   };
 
   const getSessionDetails = (sessionId: string) => {
-    const session = sessions.find(s => s.id === sessionId);
-    if (!session) return { gameType: 'Unknown', duration: 0 };
-    return {
-      gameType: 'Session',
-      duration: session.hours
-    };
+    try {
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) return { gameType: 'Unknown', duration: 0 };
+      return {
+        gameType: 'Session',
+        duration: session.hours || 0
+      };
+    } catch (error) {
+      return { gameType: 'Error', duration: 0 };
+    }
   };
 
   const getPaymentStats = () => {
@@ -313,7 +321,13 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({
                     </td>
                     <td className="py-4 px-4">
                       <div className="text-void-700 dark:text-neon-bright/70 font-arcade text-sm">
-                        {format(new Date(payment.createdAt), 'MMM dd, HH:mm')}
+                        {(() => {
+                          try {
+                            return format(new Date(payment.createdAt), 'MMM dd, HH:mm');
+                          } catch (error) {
+                            return 'Invalid Date';
+                          }
+                        })()}
                       </div>
                     </td>
                     <td className="py-4 px-4">
