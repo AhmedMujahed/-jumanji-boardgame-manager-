@@ -28,13 +28,12 @@ interface DashboardProps {
   onDeleteCustomer?: (customerId: string) => void;
   onAddSession: (session: Omit<Session, 'id' | 'startTime' | 'status' | 'totalCost' | 'hours'>) => void;
   onUpdateSession: (sessionId: string, updates: Partial<Session>) => void;
-  onEndSession: (sessionId: string) => void;
+  onEndSession: (sessionId: string, paymentDetails: { method: 'cash' | 'card' | 'mixed'; cashAmount: number; cardAmount: number; totalPaid: number }) => void;
   onAddGame: (game: Omit<Game, 'id'>) => void;
   onUpdateGame: (gameId: string, updates: Partial<Game>) => void;
   onDeleteGame: (gameId: string) => void;
   onAddPayment: (payment: Omit<Payment, 'id'>) => void;
   onUpdatePayment: (paymentId: string, updates: Partial<Payment>) => void;
-  onDeletePayment: (paymentId: string) => void;
   onAddPromotion?: (p: Omit<Promotion, 'id' | 'createdAt'>) => void;
   onUpdatePromotion?: (id: string, updates: Partial<Promotion>) => void;
   onDeletePromotion?: (id: string) => void;
@@ -71,7 +70,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   onDeleteGame,
   onAddPayment,
   onUpdatePayment,
-  onDeletePayment,
   onAddPromotion,
   onUpdatePromotion,
   onDeletePromotion,
@@ -129,7 +127,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       case 'promotions':
         return <Promotions promotions={promotions || []} onAddPromotion={onAddPromotion!} onUpdatePromotion={onUpdatePromotion!} onDeletePromotion={onDeletePromotion!} />;
       case 'payments':
-        return <PaymentTracking payments={payments} sessions={sessions} customers={customers} onAddPayment={onAddPayment} onUpdatePayment={onUpdatePayment} onDeletePayment={onDeletePayment} />;
+        return <PaymentTracking payments={payments} sessions={sessions} customers={customers} onAddPayment={onAddPayment} onUpdatePayment={onUpdatePayment} />;
       case 'tables':
         return <TableManagement tables={tables} reservations={reservations} customers={customers} sessions={sessions} onAddTable={onAddTable} onUpdateTable={onUpdateTable} onDeleteTable={onDeleteTable} onTableStatusChange={onTableStatusChange} onAddReservation={onAddReservation} onUpdateReservation={onUpdateReservation} onDeleteReservation={onDeleteReservation} onRefreshTables={onRefreshTables} />;
       case 'logs':

@@ -57,7 +57,7 @@ const Overview: React.FC<OverviewProps> = ({ customers, sessions, payments, user
     const monthlyRevenue = payments
       .filter(p => p.status === 'completed')
       .filter(p => {
-        const dt = new Date(p.timestamp);
+        const dt = new Date(p.createdAt);
         return dt >= monthStart && dt <= monthEnd;
       })
       .reduce((sum, p) => sum + (p.amount || 0), 0);

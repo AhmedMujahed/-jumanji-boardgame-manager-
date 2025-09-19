@@ -9,7 +9,6 @@ interface PaymentTrackingProps {
   customers: Customer[];
   onAddPayment: (payment: Omit<Payment, 'id'>) => void;
   onUpdatePayment: (paymentId: string, updates: Partial<Payment>) => void;
-  onDeletePayment: (paymentId: string) => void;
 }
 
 const PaymentTracking: React.FC<PaymentTrackingProps> = ({ 
@@ -17,22 +16,10 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({
   sessions, 
   customers, 
   onAddPayment, 
-  onUpdatePayment, 
-  onDeletePayment 
+  onUpdatePayment
 }) => {
-  const [showAddForm, setShowAddForm] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedMethod, setSelectedMethod] = useState<string>('all');
-  const [formData, setFormData] = useState({
-    sessionId: '',
-    amount: 0,
-    method: 'cash' as 'cash' | 'card' | 'online' | 'mixed',
-    cashAmount: 0,
-    cardAmount: 0,
-    onlineAmount: 0,
-    status: 'pending' as 'pending' | 'completed' | 'failed',
-    notes: ''
-  });
 
   const paymentMethods = [
     { value: 'cash', label: 'Cash', icon: '💵' },
@@ -42,60 +29,9 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({
   ];
 
   const paymentStatuses = [
-    { value: 'pending', label: 'Pending', icon: '⏳', color: 'warning' },
-    { value: 'completed', label: 'Completed', icon: '✅', color: 'success' },
-    { value: 'failed', label: 'Failed', icon: '❌', color: 'danger' }
+    { value: 'completed', label: 'Completed', icon: '✅', color: 'success' }
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    let totalAmount = formData.amount;
-    
-    // For mixed payments, calculate total from individual amounts
-    if (formData.method === 'mixed') {
-      totalAmount = formData.cashAmount + formData.cardAmount + formData.onlineAmount;
-    }
-    
-    // Validate that total amount matches the session cost
-    const session = sessions.find(s => s.id === formData.sessionId);
-    if (session && Math.abs(totalAmount - session.totalCost) > 0.01) {
-      alert(`Payment amount (${totalAmount} SAR) doesn't match session cost (${session.totalCost} SAR)`);
-      return;
-    }
-    
-    onAddPayment({
-      sessionId: formData.sessionId,
-      amount: totalAmount,
-      method: formData.method,
-      cashAmount: formData.method === 'mixed' ? formData.cashAmount : undefined,
-      cardAmount: formData.method === 'mixed' ? formData.cardAmount : undefined,
-      onlineAmount: formData.method === 'mixed' ? formData.onlineAmount : undefined,
-      status: formData.status,
-      notes: formData.notes,
-      timestamp: new Date().toISOString()
-    });
-    
-    setFormData({
-      sessionId: '',
-      amount: 0,
-      method: 'cash',
-      cashAmount: 0,
-      cardAmount: 0,
-      onlineAmount: 0,
-      status: 'pending',
-      notes: ''
-    });
-    setShowAddForm(false);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'number' ? parseFloat(value) : value
-    }));
-  };
 
   const filteredPayments = payments.filter(payment => {
     const matchesStatus = selectedStatus === 'all' || payment.status === selectedStatus;
@@ -179,20 +115,17 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({
           <span className="text-4xl">💰</span>
           <div>
             <h2 className="text-3xl font-arcade font-black text-gold-bright">
-              Payment Tracking
+              Session Payment Records
             </h2>
             <p className="text-void-800 dark:text-neon-bright/80 font-arcade">
-              Monitor revenue and payment status
+              View payment records automatically generated from completed sessions
             </p>
           </div>
         </div>
-        <button 
-          onClick={() => setShowAddForm(true)}
-          className="px-6 py-3 bg-neon-bright hover:bg-neon-glow text-void-1000 font-arcade font-black rounded-xl transition-all duration-300 transform hover:scale-105 shadow-neon hover:shadow-neon-lg border-2 border-neon-bright flex items-center space-x-2"
-        >
-          <span className="text-xl">➕</span>
-          <span>ADD PAYMENT</span>
-        </button>
+        <div className="px-6 py-3 bg-void-800/50 text-neon-bright font-arcade font-bold rounded-xl border-2 border-neon-bright/30 flex items-center space-x-2">
+          <span className="text-xl">📊</span>
+          <span>SESSION PAYMENT RECORDS</span>
+        </div>
       </div>
 
       {/* Key Metrics */}
@@ -311,208 +244,6 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({
         </div>
       </div>
 
-      {/* Add Payment Modal */}
-      {showAddForm && (
-        <ModalPortal>
-          <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999]">
-            <div className="bg-[#0D0D1A] p-6 rounded-2xl shadow-lg w-full max-w-md mx-4 animate-fade-in border-2 border-neon-bright">
-            {/* Modal Header */}
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center space-x-3">
-                <span className="text-3xl">💰</span>
-                <h3 className="text-2xl font-arcade font-black text-gold-bright">
-                  Add New Payment
-                </h3>
-              </div>
-              <button 
-                onClick={() => setShowAddForm(false)}
-                className="p-2 bg-light-200 dark:bg-void-800 hover:bg-light-300 dark:hover:bg-void-700 text-danger-400 rounded-lg transition-all duration-300 text-xl font-bold"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                  Session *
-                </label>
-                <select
-                  name="sessionId"
-                  value={formData.sessionId}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300"
-                >
-                  <option value="">Select a session</option>
-                  {sessions.filter(s => s.status === 'completed').map(session => {
-                    const customer = customers.find(c => c.id === session.customerId);
-                    return (
-                      <option key={session.id} value={session.id}>
-                        {customer?.name || 'Unknown'} - Session ({session.hours}h)
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                  Amount (SAR) *
-                </label>
-                <input
-                  type="number"
-                  name="amount"
-                  value={formData.amount}
-                  onChange={handleInputChange}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                  required
-                  className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                  Payment Method *
-                </label>
-                <select
-                  name="method"
-                  value={formData.method}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300"
-                >
-                  {paymentMethods.map(method => (
-                    <option key={method.value} value={method.value}>
-                      {method.icon} {method.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Mixed Payment Fields */}
-              {formData.method === 'mixed' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                      Cash Amount
-                    </label>
-                    <input
-                      type="number"
-                      name="cashAmount"
-                      value={formData.cashAmount}
-                      onChange={handleInputChange}
-                      placeholder="0.00"
-                      step="0.01"
-                      min="0"
-                      className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                      Card Amount
-                    </label>
-                    <input
-                      type="number"
-                      name="cardAmount"
-                      value={formData.cardAmount}
-                      onChange={handleInputChange}
-                      placeholder="0.00"
-                      step="0.01"
-                      min="0"
-                      className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                      Online Amount
-                    </label>
-                    <input
-                      type="number"
-                      name="onlineAmount"
-                      value={formData.onlineAmount}
-                      onChange={handleInputChange}
-                      placeholder="0.00"
-                      step="0.01"
-                      min="0"
-                      className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Payment Summary for Mixed */}
-              {formData.method === 'mixed' && (
-                <div className="p-3 bg-void-700/30 rounded-lg border border-neon-bright/20">
-                  <div className="text-center">
-                    <div className="text-neon-bright/80 font-arcade text-sm">
-                      <strong>💰 Payment Summary:</strong> Total: {formData.cashAmount + formData.cardAmount + formData.onlineAmount} SAR
-                    </div>
-                    <div className="text-neon-bright/60 font-arcade text-xs mt-1">
-                      💵 Cash: {formData.cashAmount} SAR • 💳 Card: {formData.cardAmount} SAR • 🌐 Online: {formData.onlineAmount} SAR
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                  Status *
-                </label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white font-arcade transition-all duration-300"
-                >
-                  {paymentStatuses.map(status => (
-                    <option key={status.value} value={status.value}>
-                      {status.icon} {status.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                  Notes
-                </label>
-                <textarea
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleInputChange}
-                  placeholder="Payment notes..."
-                  rows={3}
-                  className="w-full px-4 py-3 border-2 border-neon-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-light-200 dark:bg-void-800 text-void-900 dark:text-white placeholder-void-600 dark:placeholder-neon-bright/60 transition-all duration-300 font-arcade resize-vertical"
-                />
-              </div>
-              
-              <div className="flex space-x-4 pt-4">
-                <button 
-                  type="button" 
-                  onClick={() => setShowAddForm(false)}
-                  className="flex-1 px-4 py-3 bg-light-300 dark:bg-void-700 hover:bg-light-400 dark:hover:bg-void-600 text-void-800 dark:text-neon-bright font-arcade font-bold rounded-xl transition-all duration-300 border-2 border-light-400 dark:border-void-600 hover:border-neon-bright/50"
-                >
-                  CANCEL
-                </button>
-                <button 
-                  type="submit" 
-                  className="flex-1 px-4 py-3 bg-neon-bright hover:bg-neon-glow text-void-1000 font-arcade font-black rounded-xl transition-all duration-300 transform hover:scale-105 shadow-neon hover:shadow-neon-lg border-2 border-neon-bright"
-                >
-                  ADD PAYMENT
-                </button>
-              </div>
-            </form>
-            </div>
-          </div>
-        </ModalPortal>
-      )}
-
       {/* Payments List */}
       <div className="bg-light-100 dark:bg-void-900/90 backdrop-blur-md rounded-3xl border-2 border-neon-bright/50 dark:border-neon-bright p-8 transition-colors duration-300">
         <h3 className="text-2xl font-arcade font-black text-gold-bright mb-6">
@@ -529,7 +260,6 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({
                 <th className="text-left py-4 px-4 text-gold-bright font-arcade font-bold">Method</th>
                 <th className="text-left py-4 px-4 text-gold-bright font-arcade font-bold">Status</th>
                 <th className="text-left py-4 px-4 text-gold-bright font-arcade font-bold">Date</th>
-                <th className="text-left py-4 px-4 text-gold-bright font-arcade font-bold">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -583,29 +313,14 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({
                     </td>
                     <td className="py-4 px-4">
                       <div className="text-void-700 dark:text-neon-bright/70 font-arcade text-sm">
-                        {format(new Date(payment.timestamp), 'MMM dd, HH:mm')}
+                        {format(new Date(payment.createdAt), 'MMM dd, HH:mm')}
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex space-x-2">
-                        <button 
-                          onClick={() => onUpdatePayment(payment.id, { 
-                            status: payment.status === 'completed' ? 'pending' : 'completed' 
-                          })}
-                          className={`px-3 py-1 rounded-lg text-xs font-arcade font-bold transition-all duration-300 ${
-                            payment.status === 'completed'
-                              ? 'bg-warning-600 hover:bg-warning-700 text-white'
-                              : 'bg-success-600 hover:bg-success-700 text-white'
-                          }`}
-                        >
-                          {payment.status === 'completed' ? 'Mark Pending' : 'Mark Complete'}
-                        </button>
-                        <button 
-                          onClick={() => onDeletePayment(payment.id)}
-                          className="px-3 py-1 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-xs font-arcade font-bold transition-all duration-300"
-                        >
-                          🗑️
-                        </button>
+                      <div className="text-center">
+                        <span className="text-green-400 font-arcade text-sm">
+                          ✅ Completed
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -625,18 +340,9 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({
             <p className="text-void-700 dark:text-neon-bright/70 font-arcade text-lg mb-8">
               {selectedStatus !== 'all' || selectedMethod !== 'all' 
                 ? 'Try adjusting your filters'
-                : 'Add your first payment to start tracking revenue!'
+                : 'Payment records will appear here automatically when sessions are completed!'
               }
             </p>
-            {selectedStatus === 'all' && selectedMethod === 'all' && (
-              <button 
-                onClick={() => setShowAddForm(true)}
-                className="px-8 py-4 bg-neon-bright hover:bg-neon-glow text-void-1000 font-arcade font-black rounded-xl transition-all duration-300 transform hover:scale-105 shadow-neon hover:shadow-neon-lg border-2 border-neon-bright flex items-center space-x-3 mx-auto"
-              >
-                <span className="text-2xl">💳</span>
-                <span>ADD FIRST PAYMENT</span>
-              </button>
-            )}
           </div>
         )}
       </div>

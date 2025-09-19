@@ -12,7 +12,7 @@ interface SessionManagementProps {
   promotions?: Promotion[];
   onAddSession: (session: Omit<Session, 'id' | 'startTime' | 'status' | 'totalCost' | 'hours'>) => void;
   onUpdateSession: (sessionId: string, updates: Partial<Session>) => void;
-  onEndSession: (sessionId: string) => void;
+  onEndSession: (sessionId: string, paymentDetails: { method: 'cash' | 'card' | 'mixed'; cashAmount: number; cardAmount: number; totalPaid: number }) => void;
   user: User;
 }
 
@@ -51,6 +51,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
 
   const [editingSession, setEditingSession] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<{
+    customerId: string;
     notes: string;
     status: 'active' | 'completed' | 'cancelled';
     capacity: number;
@@ -58,17 +59,27 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     female: number;
     tableId: string;
     tableNumber: number;
+    editReason: string;
   }>({
+    customerId: '',
     notes: '',
     status: 'active',
     capacity: 1,
     male: 1,
     female: 0,
     tableId: '',
-    tableNumber: 0
+    tableNumber: 0,
+    editReason: ''
   });
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showEndConfirmation, setShowEndConfirmation] = useState<string | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<string | null>(null);
+  const [paymentDetails, setPaymentDetails] = useState({
+    method: 'cash' as 'cash' | 'card' | 'mixed',
+    cashAmount: 0,
+    cardAmount: 0,
+    totalPaid: 0
+  });
 
   // Update current time every second for live cost calculation
   useEffect(() => {
@@ -181,13 +192,15 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     const session = sessions.find(s => s.id === sessionId);
     if (session) {
       setEditFormData({
+        customerId: session.customerId,
         notes: session.notes || '',
         status: session.status,
         capacity: session.capacity,
         male: session.genderBreakdown?.male || 0,
         female: session.genderBreakdown?.female || 0,
         tableId: session.tableId,
-        tableNumber: session.tableNumber || 0
+        tableNumber: session.tableNumber || 0,
+        editReason: ''
       });
       setEditingSession(sessionId);
     }
@@ -201,46 +214,146 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
       alert(`Gender count mismatch! Male (${editFormData.male}) + Female (${editFormData.female}) must equal Total People (${editFormData.capacity})`);
       return;
     }
+
+    // Validate edit reason
+    if (!editFormData.editReason.trim()) {
+      alert('Please provide a reason for editing this session.');
+      return;
+    }
     
     if (editingSession) {
       onUpdateSession(editingSession, {
+        customerId: editFormData.customerId,
         notes: editFormData.notes,
         status: editFormData.status,
         capacity: editFormData.capacity,
         genderBreakdown: {
           male: editFormData.male,
           female: editFormData.female
-        }
+        },
+        tableId: editFormData.tableId,
+        tableNumber: editFormData.tableNumber
       });
       setEditingSession(null);
-      setEditFormData({ notes: '', status: 'active', capacity: 1, male: 1, female: 0, tableId: '', tableNumber: 0 });
+      setEditFormData({ customerId: '', notes: '', status: 'active', capacity: 1, male: 1, female: 0, tableId: '', tableNumber: 0, editReason: '' });
     }
   };
 
-  const handleDeleteSession = (sessionId: string) => {
-    if (window.confirm('Are you sure you want to delete this session? This action cannot be undone.')) {
-      onUpdateSession(sessionId, { status: 'cancelled' });
+  const handleDeleteSessionClick = (sessionId: string) => {
+    setShowDeleteConfirmation(sessionId);
+  };
+
+  const handleConfirmDeleteSession = () => {
+    if (showDeleteConfirmation) {
+      onUpdateSession(showDeleteConfirmation, { status: 'cancelled' });
+      setShowDeleteConfirmation(null);
     }
+  };
+
+  const handleCancelDeleteSession = () => {
+    setShowDeleteConfirmation(null);
   };
 
   const handleCancelEdit = () => {
     setEditingSession(null);
-    setEditFormData({ notes: '', status: 'active', capacity: 1, male: 1, female: 0, tableId: '', tableNumber: 0 });
+    setEditFormData({ customerId: '', notes: '', status: 'active', capacity: 1, male: 1, female: 0, tableId: '', tableNumber: 0, editReason: '' });
   };
 
   const handleEndSessionClick = (sessionId: string) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (session) {
+      // Calculate the expected cost
+      const startTime = new Date(session.startTime);
+      const endTime = new Date();
+      const durationMs = endTime.getTime() - startTime.getTime();
+      const durationMinutes = Math.floor(durationMs / (1000 * 60));
+      
+      const firstHourPrice = session.promoId ? (promotions.find(p => p.id === session.promoId)?.firstHourPrice || 30) : 30;
+      const extraHourPrice = session.promoId ? (promotions.find(p => p.id === session.promoId)?.extraHourPrice || 30) : 30;
+      
+      let expectedCost = 0;
+      if (durationMinutes < 30) {
+        expectedCost = 0;
+      } else if (durationMinutes < 90) {
+        expectedCost = firstHourPrice * session.capacity;
+      } else {
+        const extraHours = Math.floor((durationMinutes - 90) / 60) + 1;
+        expectedCost = (firstHourPrice + (extraHours * extraHourPrice)) * session.capacity;
+      }
+
+      // Initialize payment details with expected cost
+      setPaymentDetails({
+        method: 'cash',
+        cashAmount: expectedCost,
+        cardAmount: 0,
+        totalPaid: expectedCost
+      });
+    }
     setShowEndConfirmation(sessionId);
   };
 
   const handleConfirmEndSession = () => {
     if (showEndConfirmation) {
-      onEndSession(showEndConfirmation);
+      onEndSession(showEndConfirmation, paymentDetails);
       setShowEndConfirmation(null);
+      setPaymentDetails({
+        method: 'cash',
+        cashAmount: 0,
+        cardAmount: 0,
+        totalPaid: 0
+      });
     }
   };
 
   const handleCancelEndSession = () => {
     setShowEndConfirmation(null);
+    setPaymentDetails({
+      method: 'cash',
+      cashAmount: 0,
+      cardAmount: 0,
+      totalPaid: 0
+    });
+  };
+
+  const handlePaymentMethodChange = (method: 'cash' | 'card' | 'mixed') => {
+    setPaymentDetails(prev => {
+      if (method === 'cash') {
+        return {
+          method: 'cash',
+          cashAmount: prev.totalPaid,
+          cardAmount: 0,
+          totalPaid: prev.totalPaid
+        };
+      } else if (method === 'card') {
+        return {
+          method: 'card',
+          cashAmount: 0,
+          cardAmount: prev.totalPaid,
+          totalPaid: prev.totalPaid
+        };
+      } else { // mix
+        return {
+          method: 'mixed',
+          cashAmount: Math.floor(prev.totalPaid / 2),
+          cardAmount: Math.ceil(prev.totalPaid / 2),
+          totalPaid: prev.totalPaid
+        };
+      }
+    });
+  };
+
+  const handlePaymentAmountChange = (type: 'cash' | 'card', amount: number) => {
+    setPaymentDetails(prev => {
+      const newDetails = { ...prev };
+      if (type === 'cash') {
+        newDetails.cashAmount = amount;
+        newDetails.cardAmount = prev.totalPaid - amount;
+      } else {
+        newDetails.cardAmount = amount;
+        newDetails.cashAmount = prev.totalPaid - amount;
+      }
+      return newDetails;
+    });
   };
 
   const activeSessions = sessions.filter(s => s.status === 'active');
@@ -640,8 +753,8 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
       {/* Edit Session Modal */}
       {editingSession && (
         <ModalPortal>
-          <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999]">
-            <div className="bg-[#0D0D1A] p-6 rounded-2xl shadow-lg w-full max-w-md mx-4 animate-fade-in border-2 border-gold-bright">
+          <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999] p-4">
+            <div className="bg-[#0D0D1A] p-8 rounded-2xl shadow-lg w-full max-w-4xl mx-4 animate-fade-in border-2 border-gold-bright max-h-[95vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center space-x-3">
@@ -659,6 +772,28 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
             </div>
             
             <form onSubmit={handleSaveEdit} className="space-y-6">
+              {/* Customer Selection */}
+              <div>
+                <label htmlFor="editCustomerId" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
+                  Select Customer *
+                </label>
+                <select
+                  id="editCustomerId"
+                  name="customerId"
+                  value={editFormData.customerId}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, customerId: e.target.value }))}
+                  required
+                  className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
+                >
+                  <option value="">Choose a customer</option>
+                  {customers.map(customer => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name} - {customer.phone}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Table Selection */}
               <div>
                 <label htmlFor="editTableId" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
@@ -688,6 +823,101 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
               </div>
 
               {/* Capacity and Gender Section */}
+              <div className="bg-void-800/50 p-8 rounded-2xl border-2 border-gold-bright/30 mb-8">
+                <h3 className="text-2xl font-arcade font-bold text-gold-bright mb-6 text-center">👥 People Count</h3>
+                
+                {/* Total People Dropdown */}
+                <div className="mb-6">
+                  <label htmlFor="editCapacity" className="block text-sm font-arcade font-bold text-gold-bright mb-3">
+                    🎯 Total People *
+                  </label>
+                  <select
+                    id="editCapacity"
+                    name="capacity"
+                    value={editFormData.capacity}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, capacity: Number(e.target.value) }))}
+                    required
+                    className="w-full px-6 py-4 border-2 border-gold-bright rounded-2xl focus:ring-4 focus:ring-neon-glow focus:border-transparent bg-void-900 text-white font-arcade transition-all duration-300 text-center text-xl"
+                  >
+                    {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
+                      <option key={num} value={num}>
+                        {num} {num === 1 ? 'Person' : 'People'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Gender Counter Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                  {/* Male Counter */}
+                  <div className="bg-void-700/50 p-8 rounded-2xl border-2 border-blue-400/50">
+                    <div className="text-center mb-6">
+                      <h4 className="text-xl font-arcade font-bold text-blue-400 mb-2">🚹 Male</h4>
+                    </div>
+                    <div className="flex items-center justify-center space-x-6">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newMale = Math.max(0, editFormData.male - 1);
+                          const newFemale = Math.min(editFormData.capacity - newMale, editFormData.female);
+                          setEditFormData(prev => ({ ...prev, male: newMale, female: newFemale }));
+                        }}
+                        className="w-16 h-16 bg-red-600 hover:bg-red-500 text-white font-arcade font-bold text-2xl rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
+                      >
+                        −
+                      </button>
+                      <div className="w-24 h-24 bg-void-900 border-4 border-blue-400 rounded-2xl flex items-center justify-center shadow-lg">
+                        <span className="text-4xl font-arcade font-bold text-blue-400">{editFormData.male}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newMale = Math.min(editFormData.capacity, editFormData.male + 1);
+                          const newFemale = editFormData.capacity - newMale;
+                          setEditFormData(prev => ({ ...prev, male: newMale, female: newFemale }));
+                        }}
+                        className="w-16 h-16 bg-green-600 hover:bg-green-500 text-white font-arcade font-bold text-2xl rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Female Counter */}
+                  <div className="bg-void-700/50 p-8 rounded-2xl border-2 border-pink-400/50">
+                    <div className="text-center mb-6">
+                      <h4 className="text-xl font-arcade font-bold text-pink-400 mb-2">🚺 Female</h4>
+                    </div>
+                    <div className="flex items-center justify-center space-x-6">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newFemale = Math.max(0, editFormData.female - 1);
+                          const newMale = Math.min(editFormData.capacity - newFemale, editFormData.male);
+                          setEditFormData(prev => ({ ...prev, female: newFemale, male: newMale }));
+                        }}
+                        className="w-16 h-16 bg-red-600 hover:bg-red-500 text-white font-arcade font-bold text-2xl rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
+                      >
+                        −
+                      </button>
+                      <div className="w-24 h-24 bg-void-900 border-4 border-pink-400 rounded-2xl flex items-center justify-center shadow-lg">
+                        <span className="text-4xl font-arcade font-bold text-pink-400">{editFormData.female}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newFemale = Math.min(editFormData.capacity, editFormData.female + 1);
+                          const newMale = editFormData.capacity - newFemale;
+                          setEditFormData(prev => ({ ...prev, female: newFemale, male: newMale }));
+                        }}
+                        className="w-16 h-16 bg-green-600 hover:bg-green-500 text-white font-arcade font-bold text-2xl rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <div>
                 <label htmlFor="editNotes" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
@@ -702,6 +932,27 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                   rows={3}
                   className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white placeholder-neon-bright/60 transition-all duration-300 font-arcade resize-vertical"
                 />
+              </div>
+
+
+              {/* Edit Reason - Required */}
+              <div className="bg-orange-900/30 p-6 rounded-xl border-2 border-orange-400/50">
+                <label htmlFor="editReason" className="block text-lg font-arcade font-bold text-orange-400 mb-3">
+                  📝 Reason for Editing Session *
+                </label>
+                <textarea
+                  id="editReason"
+                  name="editReason"
+                  value={editFormData.editReason}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, editReason: e.target.value }))}
+                  placeholder="Why are you editing this session? (e.g., customer request, table change, people count correction, etc.)"
+                  rows={4}
+                  required
+                  className="w-full px-4 py-3 border-2 border-orange-400 rounded-xl focus:ring-2 focus:ring-orange-300 focus:border-transparent bg-void-800 text-white placeholder-orange-400/60 transition-all duration-300 font-arcade resize-vertical"
+                />
+                <div className="text-orange-400/80 font-arcade text-sm mt-2 text-center">
+                  ⚠️ This edit reason will be logged for audit and record keeping purposes
+                </div>
               </div>
 
               <div>
@@ -721,7 +972,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                 </select>
               </div>
               
-              <div className="flex space-x-4 pt-4">
+              <div className="flex space-x-4 pt-6">
                 <button 
                   type="button" 
                   onClick={handleCancelEdit}
@@ -744,7 +995,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
 
       {/* Active Sessions */}
       {activeSessions.length > 0 && (
-        <div className="bg-void-900/90 backdrop-blur-md rounded-3xl shadow-2xl border-2 border-success-500 p-8">
+        <div className="bg-void-900/90 backdrop-blur-md rounded-3xl shadow-2xl border-2 border-success-500 p-8 max-h-[80vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-3">
               <span className="text-3xl">🔥</span>
@@ -853,30 +1104,33 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                     </div>
                   )}
 
-                  {/* Action Buttons */}
-                  <div className="flex space-x-2 mb-4">
+                  {/* Main Action Buttons */}
+                  <div className="space-y-3">
+                    {/* End Session Button - Most Important */}
                     <button 
-                      onClick={() => handleEditSession(session.id)}
-                      className="flex-1 px-3 py-2 bg-neon-bright hover:bg-neon-glow text-void-1000 font-arcade font-bold rounded-lg transition-all duration-300 text-sm"
+                      onClick={() => handleEndSessionClick(session.id)}
+                      className="w-full px-4 py-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-arcade font-black rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border-2 border-red-500 flex items-center justify-center space-x-3 text-lg"
                     >
-                      ✏️ EDIT
+                      <span className="text-2xl">⏹️</span>
+                      <span>END SESSION</span>
                     </button>
-                    <button 
-                      onClick={() => handleDeleteSession(session.id)}
-                      className="px-3 py-2 bg-danger-600 hover:bg-danger-700 text-white font-arcade font-bold rounded-lg transition-all duration-300 text-sm"
-                    >
-                      🗑️ DELETE
-                    </button>
-                  </div>
 
-                  {/* End Session Button */}
-                  <button 
-                    onClick={() => handleEndSessionClick(session.id)}
-                    className="w-full px-4 py-3 bg-danger-600 hover:bg-danger-700 text-white font-arcade font-black rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border-2 border-danger-600 hover:border-danger-500 flex items-center justify-center space-x-2"
-                  >
-                    <span>⏹️</span>
-                    <span>END SESSION</span>
-                  </button>
+                    {/* Secondary Action Buttons */}
+                    <div className="flex space-x-2">
+                      <button 
+                        onClick={() => handleEditSession(session.id)}
+                        className="flex-1 px-3 py-2 bg-neon-bright hover:bg-neon-glow text-void-1000 font-arcade font-bold rounded-lg transition-all duration-300 text-sm"
+                      >
+                        ✏️ EDIT
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteSessionClick(session.id)}
+                        className="px-3 py-2 bg-danger-600 hover:bg-danger-700 text-white font-arcade font-bold rounded-lg transition-all duration-300 text-sm"
+                      >
+                        🗑️ DELETE
+                      </button>
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -999,7 +1253,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
       {showEndConfirmation && (
         <ModalPortal>
           <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-[9999] p-4">
-            <div className="bg-[#0D0D1A] p-8 rounded-2xl shadow-2xl w-full max-w-lg mx-4 animate-fade-in border-2 border-red-500/50">
+            <div className="bg-[#0D0D1A] p-8 rounded-2xl shadow-2xl w-full max-w-lg mx-4 animate-fade-in border-2 border-red-500/50 max-h-[90vh] overflow-y-auto">
               {/* Modal Header */}
               <div className="text-center mb-8">
                 <div className="text-6xl mb-4">⚠️</div>
@@ -1011,23 +1265,156 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                 </p>
               </div>
 
-              {/* Session Info */}
+              {/* Session Info & Payment Details */}
               {(() => {
                 const session = sessions.find(s => s.id === showEndConfirmation);
                 const customer = customers.find(c => c.id === session?.customerId);
                 if (!session) return null;
 
+                // Calculate session duration and cost
+                const startTime = new Date(session.startTime);
+                const endTime = new Date();
+                const durationMs = endTime.getTime() - startTime.getTime();
+                const durationMinutes = Math.floor(durationMs / (1000 * 60));
+                const durationHours = Math.floor(durationMinutes / 60);
+                const remainingMinutes = durationMinutes % 60;
+
+                // Calculate cost based on pricing logic
+                const firstHourPrice = session.promoId ? (promotions.find(p => p.id === session.promoId)?.firstHourPrice || 30) : 30;
+                const extraHourPrice = session.promoId ? (promotions.find(p => p.id === session.promoId)?.extraHourPrice || 30) : 30;
+                
+                let totalCost = 0;
+                if (durationMinutes < 30) {
+                  totalCost = 0;
+                } else if (durationMinutes < 90) {
+                  totalCost = firstHourPrice * session.capacity;
+                } else {
+                  const extraHours = Math.floor((durationMinutes - 90) / 60) + 1;
+                  totalCost = (firstHourPrice + (extraHours * extraHourPrice)) * session.capacity;
+                }
+
                 return (
-                  <div className="bg-void-800/50 p-6 rounded-xl border border-red-400/30 mb-8">
-                    <div className="text-center">
-                      <div className="text-gold-bright font-arcade font-bold text-lg mb-2">
-                        {customer?.name || 'Unknown Customer'}
+                  <div className="space-y-6 mb-8">
+                    {/* Customer & Session Info */}
+                    <div className="bg-void-800/50 p-6 rounded-xl border border-gold-bright/30">
+                      <div className="text-center">
+                        <div className="text-gold-bright font-arcade font-bold text-xl mb-2">
+                          {customer?.name || 'Unknown Customer'}
+                        </div>
+                        <div className="text-neon-bright/80 font-arcade text-sm mb-2">
+                          👥 {session.capacity} people • 🏠 Table {session.tableNumber}
+                        </div>
+                        <div className="text-neon-bright/80 font-arcade text-sm">
+                          🕐 Started: {startTime.toLocaleTimeString()} • Duration: {durationHours}h {remainingMinutes}m
+                        </div>
                       </div>
-                      <div className="text-neon-bright/80 font-arcade text-sm mb-2">
-                        👥 {session.capacity} people • 🏠 Table {session.tableNumber}
+                    </div>
+
+                    {/* Payment Summary */}
+                    <div className="bg-gradient-to-r from-green-900/30 to-blue-900/30 p-6 rounded-xl border-2 border-green-400/50">
+                      <div className="text-center mb-6">
+                        <div className="text-green-400 font-arcade font-bold text-xl mb-2">
+                          💰 Payment Record
+                        </div>
+                        <div className="text-green-400/80 font-arcade text-sm mb-4">
+                          (For record keeping purposes only)
+                        </div>
                       </div>
-                      <div className="text-neon-bright/80 font-arcade text-sm">
-                        🕐 Started: {new Date(session.startTime).toLocaleTimeString()}
+
+                      {/* Session Details */}
+                      <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="bg-void-900/50 p-4 rounded-xl border border-green-400/30">
+                          <div className="text-center">
+                            <div className="text-green-400 font-arcade font-bold text-sm">People Count</div>
+                            <div className="text-2xl font-arcade font-bold text-green-400">{session.capacity}</div>
+                          </div>
+                        </div>
+                        <div className="bg-void-900/50 p-4 rounded-xl border border-green-400/30">
+                          <div className="text-center">
+                            <div className="text-green-400 font-arcade font-bold text-sm">Duration</div>
+                            <div className="text-2xl font-arcade font-bold text-green-400">{durationHours}h {remainingMinutes}m</div>
+                          </div>
+                        </div>
+                      </div>
+
+
+                      {/* Payment Method Selection */}
+                      <div className="mb-6">
+                        <div className="text-green-400 font-arcade font-bold text-sm mb-3 text-center">Payment Method</div>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(['cash', 'card', 'mixed'] as const).map(method => (
+                            <button
+                              key={method}
+                              type="button"
+                              onClick={() => handlePaymentMethodChange(method)}
+                              className={`p-3 rounded-xl font-arcade font-bold text-sm transition-all duration-200 ${
+                                paymentDetails.method === method
+                                  ? 'bg-green-600 text-white border-2 border-green-400'
+                                  : 'bg-void-800 text-green-400 border border-green-400/30 hover:bg-green-900/20'
+                              }`}
+                            >
+                              {method === 'cash' && '💵 Cash'}
+                              {method === 'card' && '💳 Card'}
+                              {method === 'mixed' && '💰 Mixed'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Payment Amounts */}
+                      {paymentDetails.method === 'mixed' ? (
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                          <div className="bg-void-900/50 p-4 rounded-xl border border-green-400/30">
+                            <div className="text-center mb-2">
+                              <div className="text-green-400 font-arcade font-bold text-sm">💵 Cash Amount</div>
+                            </div>
+                            <input
+                              type="number"
+                              value={paymentDetails.cashAmount}
+                              onChange={(e) => handlePaymentAmountChange('cash', Number(e.target.value) || 0)}
+                              className="w-full text-center text-xl font-arcade font-bold bg-void-800 text-green-400 border border-green-400/50 rounded-lg p-2"
+                            />
+                          </div>
+                          <div className="bg-void-900/50 p-4 rounded-xl border border-green-400/30">
+                            <div className="text-center mb-2">
+                              <div className="text-green-400 font-arcade font-bold text-sm">💳 Card Amount</div>
+                            </div>
+                            <input
+                              type="number"
+                              value={paymentDetails.cardAmount}
+                              onChange={(e) => handlePaymentAmountChange('card', Number(e.target.value) || 0)}
+                              className="w-full text-center text-xl font-arcade font-bold bg-void-800 text-green-400 border border-green-400/50 rounded-lg p-2"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mb-6">
+                          <div className="bg-void-900/50 p-4 rounded-xl border border-green-400/30">
+                            <div className="text-center">
+                              <div className="text-green-400 font-arcade font-bold text-sm mb-2">
+                                {paymentDetails.method === 'cash' ? '💵 Cash Payment' : '💳 Card Payment'}
+                              </div>
+                              <div className="text-3xl font-arcade font-bold text-green-400">
+                                {paymentDetails.method === 'cash' ? paymentDetails.cashAmount : paymentDetails.cardAmount} SAR
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Total Amount */}
+                      <div className="bg-void-900/50 p-6 rounded-xl border-2 border-green-400/50">
+                        <div className="text-center">
+                          <div className="text-green-400 font-arcade font-bold text-lg mb-1">Total Amount Due</div>
+                          <div className="text-4xl font-arcade font-bold text-green-400">{totalCost} SAR</div>
+                          <div className="text-green-400 font-arcade font-bold text-lg mb-1 mt-4">Amount Received</div>
+                          <div className="text-4xl font-arcade font-bold text-green-400">{paymentDetails.totalPaid} SAR</div>
+                          {session.promoId && (
+                            <div className="text-green-400/70 font-arcade text-xs mt-2">
+                              🎁 Promotion Applied: {promotions.find(p => p.id === session.promoId)?.name}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1041,7 +1428,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                     ⚠️ This action cannot be undone!
                   </div>
                   <div className="text-red-400/80 font-arcade text-xs">
-                    The session will be marked as completed and billing will be finalized.
+                    The session will be marked as completed and payment record will be saved for bookkeeping.
                   </div>
                 </div>
               </div>
@@ -1056,9 +1443,89 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                 </button>
                 <button 
                   onClick={handleConfirmEndSession}
+                  className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-500 text-white font-arcade font-bold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border-2 border-green-500"
+                >
+                  💰 End & Record Payment
+                </button>
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
+
+      {/* Delete Session Confirmation Modal */}
+      {showDeleteConfirmation && (
+        <ModalPortal>
+          <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-[9999] p-4">
+            <div className="bg-[#0D0D1A] p-8 rounded-2xl shadow-2xl w-full max-w-md mx-4 animate-fade-in border-2 border-red-500/50">
+              {/* Modal Header */}
+              <div className="text-center mb-8">
+                <div className="text-6xl mb-4">🗑️</div>
+                <h3 className="text-2xl font-arcade font-bold text-red-400 mb-2">
+                  Delete Session?
+                </h3>
+                <p className="text-red-400/80 font-arcade text-sm">
+                  This will cancel the session and free up the table
+                </p>
+              </div>
+
+              {/* Session Details */}
+              {(() => {
+                const session = sessions.find(s => s.id === showDeleteConfirmation);
+                const customer = customers.find(c => c.id === session?.customerId);
+                const table = tables.find(t => t.id === session?.tableId);
+                
+                if (!session) return null;
+                
+                return (
+                  <div className="bg-red-900/30 p-6 rounded-xl border-2 border-red-400/50 mb-8">
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-red-400 font-arcade font-bold">Customer:</span>
+                        <span className="text-white font-arcade">{customer?.name || 'Unknown'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-red-400 font-arcade font-bold">Table:</span>
+                        <span className="text-white font-arcade">Table {table?.tableNumber || session.tableNumber}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-red-400 font-arcade font-bold">People:</span>
+                        <span className="text-white font-arcade">{session.capacity} ({session.genderBreakdown?.male || 0}M, {session.genderBreakdown?.female || 0}F)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-red-400 font-arcade font-bold">Duration:</span>
+                        <span className="text-white font-arcade">{formatDistanceToNow(new Date(session.startTime), { addSuffix: true })}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Warning Message */}
+              <div className="bg-red-900/30 p-4 rounded-xl border border-red-400/50 mb-8">
+                <div className="text-center">
+                  <div className="text-red-400 font-arcade font-bold text-sm mb-2">
+                    ⚠️ This action cannot be undone!
+                  </div>
+                  <div className="text-red-400/80 font-arcade text-xs">
+                    The session will be marked as cancelled and the table will be freed.
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-4">
+                <button 
+                  onClick={handleCancelDeleteSession}
+                  className="flex-1 px-6 py-3 bg-void-700 hover:bg-void-600 text-neon-bright font-arcade font-bold rounded-xl transition-all duration-300 border-2 border-neon-bright/30"
+                >
+                  ❌ Cancel
+                </button>
+                <button 
+                  onClick={handleConfirmDeleteSession}
                   className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-arcade font-bold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border-2 border-red-500"
                 >
-                  ⏹️ End Session
+                  🗑️ Delete Session
                 </button>
               </div>
             </div>

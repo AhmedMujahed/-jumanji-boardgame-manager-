@@ -145,6 +145,7 @@ export interface Game {
 export interface Payment {
   id: string;
   sessionId: string;
+  customerId: string;
   amount: number;
   method: 'cash' | 'card' | 'online' | 'mixed';
   cashAmount?: number; // Amount paid in cash
@@ -152,7 +153,7 @@ export interface Payment {
   onlineAmount?: number; // Amount paid online
   status: 'pending' | 'completed' | 'failed';
   notes?: string;
-  timestamp: string;
+  createdAt: string;
 }
 
 // New interface for session capacity and gender

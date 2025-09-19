@@ -258,7 +258,7 @@ const App: React.FC = () => {
     notifyAll('session:update', { action: 'update', sessionId, updates });
   };
 
-  const endSession = (sessionId: string) => {
+  const endSession = (sessionId: string, paymentDetails: { method: 'cash' | 'card' | 'mixed'; cashAmount: number; cardAmount: number; totalPaid: number }) => {
     setSessions(prev => prev.map(session => {
       if (session.id === sessionId) {
         const endTime = new Date();
@@ -305,6 +305,22 @@ const App: React.FC = () => {
     }
     
     const customer = customers.find(c => c.id === session?.customerId);
+    
+    // Create payment record
+    if (session && paymentDetails.totalPaid > 0) {
+      addPayment({
+        sessionId: sessionId,
+        customerId: session.customerId,
+        amount: paymentDetails.totalPaid,
+        method: paymentDetails.method,
+        status: 'completed',
+        createdAt: new Date().toISOString(),
+        cashAmount: paymentDetails.cashAmount,
+        cardAmount: paymentDetails.cardAmount,
+        onlineAmount: 0
+      });
+    }
+    
     addLog('session_end', 'Session Ended', `Ended session for customer: ${customer?.name || 'Unknown'} - ${session?.capacity || 0} people - Duration: ${session?.hours || 0}h, Cost: ${session?.totalCost || 0} SAR`);
     // Broadcast completion
     notifyAll('session:update', { action: 'end', sessionId });
@@ -639,7 +655,6 @@ const App: React.FC = () => {
       onDeleteGame={deleteGame}
       onAddPayment={addPayment}
       onUpdatePayment={updatePayment}
-      onDeletePayment={deletePayment}
       onAddTable={addTable}
       onUpdateTable={updateTable}
       onDeleteTable={deleteTable}
