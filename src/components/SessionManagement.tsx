@@ -206,6 +206,24 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     }
   };
 
+  const handleEditCompletedSession = (sessionId: string) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (session) {
+      setEditFormData({
+        customerId: session.customerId,
+        notes: session.notes || '',
+        status: session.status,
+        capacity: session.capacity,
+        male: session.genderBreakdown?.male || 0,
+        female: session.genderBreakdown?.female || 0,
+        tableId: session.tableId,
+        tableNumber: session.tableNumber || 0,
+        editReason: ''
+      });
+      setEditingSession(sessionId);
+    }
+  };
+
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -222,18 +240,34 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
     }
     
     if (editingSession) {
-      onUpdateSession(editingSession, {
-        customerId: editFormData.customerId,
-        notes: editFormData.notes,
-        status: editFormData.status,
-        capacity: editFormData.capacity,
-        genderBreakdown: {
-          male: editFormData.male,
-          female: editFormData.female
-        },
-        tableId: editFormData.tableId,
-        tableNumber: editFormData.tableNumber
-      });
+      const currentSession = sessions.find(s => s.id === editingSession);
+      const isCompletedSession = currentSession?.status === 'completed';
+      
+      if (isCompletedSession) {
+        // For completed sessions, only update people count
+        onUpdateSession(editingSession, {
+          capacity: editFormData.capacity,
+          genderBreakdown: {
+            male: editFormData.male,
+            female: editFormData.female
+          }
+        });
+      } else {
+        // For active sessions, update all fields
+        onUpdateSession(editingSession, {
+          customerId: editFormData.customerId,
+          notes: editFormData.notes,
+          status: editFormData.status,
+          capacity: editFormData.capacity,
+          genderBreakdown: {
+            male: editFormData.male,
+            female: editFormData.female
+          },
+          tableId: editFormData.tableId,
+          tableNumber: editFormData.tableNumber
+        });
+      }
+      
       setEditingSession(null);
       setEditFormData({ customerId: '', notes: '', status: 'active', capacity: 1, male: 1, female: 0, tableId: '', tableNumber: 0, editReason: '' });
     }
@@ -760,7 +794,10 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
               <div className="flex items-center space-x-3">
                 <span className="text-3xl">✏️</span>
                 <h3 className="text-2xl font-arcade font-black text-gold-bright">
-                  Edit Session
+                  {(() => {
+                    const currentSession = sessions.find(s => s.id === editingSession);
+                    return currentSession?.status === 'completed' ? 'Edit Completed Session' : 'Edit Session';
+                  })()}
                 </h3>
               </div>
               <button 
@@ -772,55 +809,112 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
             </div>
             
             <form onSubmit={handleSaveEdit} className="space-y-6">
-              {/* Customer Selection */}
-              <div>
-                <label htmlFor="editCustomerId" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                  Select Customer *
-                </label>
-                <select
-                  id="editCustomerId"
-                  name="customerId"
-                  value={editFormData.customerId}
-                  onChange={(e) => setEditFormData(prev => ({ ...prev, customerId: e.target.value }))}
-                  required
-                  className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
-                >
-                  <option value="">Choose a customer</option>
-                  {customers.map(customer => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name} - {customer.phone}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {(() => {
+                const currentSession = sessions.find(s => s.id === editingSession);
+                const isCompletedSession = currentSession?.status === 'completed';
+                
+                return (
+                  <>
+                    {/* Notice for completed sessions */}
+                    {isCompletedSession && (
+                      <div className="bg-orange-900/30 p-4 rounded-xl border-2 border-orange-400/50 mb-6">
+                        <div className="text-center">
+                          <div className="text-orange-400 font-arcade font-bold text-sm mb-2">
+                            📝 Editing Completed Session
+                          </div>
+                          <div className="text-orange-400/80 font-arcade text-xs">
+                            You can only change the number of people and must provide a reason for the edit.
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
-              {/* Table Selection */}
-              <div>
-                <label htmlFor="editTableId" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
-                  Select Table *
-                </label>
-                                 <select
-                   id="editTableId"
-                   name="tableId"
-                   value={editFormData.tableId}
-                   onChange={(e) => {
-                     const selectedTable = tables.find(t => t.id === e.target.value);
-                     setEditFormData(prev => ({
-                       ...prev,
-                       tableId: e.target.value,
-                       tableNumber: selectedTable?.tableNumber || 0
-                     }));
-                   }}
-                   required
-                   className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
-                 >
-                   {tables.map(table => (
-                     <option key={table.id} value={table.id}>
-                       🏠 Table {table.tableNumber} - {table.type}
-                     </option>
-                   ))}
-                 </select>
-              </div>
+                    {/* Customer Selection - Only for active sessions */}
+                    {!isCompletedSession && (
+                      <div>
+                        <label htmlFor="editCustomerId" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
+                          Select Customer *
+                        </label>
+                        <select
+                          id="editCustomerId"
+                          name="customerId"
+                          value={editFormData.customerId}
+                          onChange={(e) => setEditFormData(prev => ({ ...prev, customerId: e.target.value }))}
+                          required
+                          className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
+                        >
+                          <option value="">Choose a customer</option>
+                          {customers.map(customer => (
+                            <option key={customer.id} value={customer.id}>
+                              {customer.name} - {customer.phone}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Customer Display - Only for completed sessions */}
+                    {isCompletedSession && (
+                      <div>
+                        <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
+                          Customer
+                        </label>
+                        <div className="w-full px-4 py-3 border-2 border-gold-bright/50 rounded-xl bg-void-800 text-white font-arcade">
+                          {customers.find(c => c.id === editFormData.customerId)?.name || 'Unknown Customer'}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
+              {/* Table Selection - Only for active sessions */}
+              {(() => {
+                const currentSession = sessions.find(s => s.id === editingSession);
+                const isCompletedSession = currentSession?.status === 'completed';
+                
+                if (!isCompletedSession) {
+                  return (
+                    <div>
+                      <label htmlFor="editTableId" className="block text-sm font-arcade font-bold text-gold-bright mb-2">
+                        Select Table *
+                      </label>
+                      <select
+                        id="editTableId"
+                        name="tableId"
+                        value={editFormData.tableId}
+                        onChange={(e) => {
+                          const selectedTable = tables.find(t => t.id === e.target.value);
+                          setEditFormData(prev => ({
+                            ...prev,
+                            tableId: e.target.value,
+                            tableNumber: selectedTable?.tableNumber || 0
+                          }));
+                        }}
+                        required
+                        className="w-full px-4 py-3 border-2 border-gold-bright rounded-xl focus:ring-2 focus:ring-neon-glow focus:border-transparent bg-void-800 text-white font-arcade transition-all duration-300"
+                      >
+                        {tables.map(table => (
+                          <option key={table.id} value={table.id}>
+                            🏠 Table {table.tableNumber} - {table.type}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div>
+                      <label className="block text-sm font-arcade font-bold text-gold-bright mb-2">
+                        Table
+                      </label>
+                      <div className="w-full px-4 py-3 border-2 border-gold-bright/50 rounded-xl bg-void-800 text-white font-arcade">
+                        Table {editFormData.tableNumber}
+                      </div>
+                    </div>
+                  );
+                }
+              })()}
 
               {/* Capacity and Gender Section */}
               <div className="bg-void-800/50 p-8 rounded-2xl border-2 border-gold-bright/30 mb-8">
@@ -1164,6 +1258,7 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                   <th className="text-left py-4 px-4 text-gold-bright font-arcade font-bold">Started</th>
                   <th className="text-left py-4 px-4 text-gold-bright font-arcade font-bold">Ended</th>
                   <th className="text-left py-4 px-4 text-gold-bright font-arcade font-bold">Notes</th>
+                  <th className="text-left py-4 px-4 text-gold-bright font-arcade font-bold">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1218,6 +1313,14 @@ const SessionManagement: React.FC<SessionManagementProps> = ({
                       ) : (
                         <span className="text-neon-bright/40 font-arcade text-sm">-</span>
                       )}
+                    </td>
+                    <td className="py-4 px-4">
+                      <button 
+                        onClick={() => handleEditCompletedSession(session.id)}
+                        className="px-3 py-2 bg-neon-bright hover:bg-neon-glow text-void-1000 font-arcade font-bold rounded-lg transition-all duration-300 text-sm"
+                      >
+                        ✏️ Edit
+                      </button>
                     </td>
                   </tr>
                 ))}
